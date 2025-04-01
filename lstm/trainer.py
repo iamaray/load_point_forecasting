@@ -184,12 +184,12 @@ class LSTMTrainer(ModelTrainer):
         targets = torch.cat(all_targets, dim=0)
 
         self.logger.info(f"Test Loss: {avg_loss:.6f}")
-
-        return {
+        testing_res_dict = {
             'test_loss': avg_loss,
             'predictions': predictions,
             'targets': targets
         }
+        return testing_res_dict
 
 
 # class ARLSTMTrainer(nn.Module):
