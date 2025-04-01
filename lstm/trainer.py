@@ -29,3 +29,15 @@ class ARLSTMTrainer(nn.Module):
         Trainer class for training an autoregressive LSTM.
         """
         pass
+
+    def _train_epoch(self, epochs):
+        pass
+
+    def _eval_epoch(self):
+        pass
+
+    def train(self):
+        pass
+
+    def test(self):
+        pass
