@@ -23,21 +23,21 @@ class LSTMTrainer(nn.Module):
         pass
 
 
-class ARLSTMTrainer(nn.Module):
-    def __init__(self):
-        """
-        Trainer class for training an autoregressive LSTM.
-        """
-        pass
+# class ARLSTMTrainer(nn.Module):
+#     def __init__(self):
+#         """
+#         Trainer class for training an autoregressive LSTM.
+#         """
+#         pass
 
-    def _train_epoch(self, epochs):
-        pass
+#     def _train_epoch(self, epochs):
+#         pass
 
-    def _eval_epoch(self):
-        pass
+#     def _eval_epoch(self):
+#         pass
 
-    def train(self):
-        pass
+#     def train(self):
+#         pass
 
-    def test(self):
-        pass
+#     def test(self):
+#         pass
