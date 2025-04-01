@@ -107,7 +107,7 @@ class FFNNTrainer(ModelTrainer):
 
         self.model.train()
 
-        for epoch in epochs:
+        for epoch in range(epochs):
             train_loss, val_loss = self._train_epoch(
                 train_loader=train_loader, epoch=epoch), self._eval_epoch(val_loader=val_loader, epoch=epoch)
 
