@@ -11,7 +11,7 @@ class ModelTrainer(nn.Module):
     def __init__(self, model, optimizer, criterion=None, scheduler=None, device=None):
         """
         Abstract class for model training.
-        
+
         Args:
             model: The neural network model to train
             optimizer: The optimizer to use for training
@@ -30,11 +30,12 @@ class ModelTrainer(nn.Module):
         self.best_model_state = None
         self.best_loss = float('inf')
         self.history = {'train_loss': [], 'val_loss': [], 'test_loss': None}
-        
+
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
@@ -42,10 +43,10 @@ class ModelTrainer(nn.Module):
     def _train_epoch(self, train_loader: DataLoader) -> float:
         """
         Train the model for one epoch.
-        
+
         Args:
             train_loader: DataLoader for training data
-            
+
         Returns:
             float: Average training loss for the epoch
         """
@@ -54,29 +55,29 @@ class ModelTrainer(nn.Module):
     def _eval_epoch(self, val_loader: DataLoader) -> float:
         """
         Evaluate the model on validation data.
-        
+
         Args:
             val_loader: DataLoader for validation data
-            
+
         Returns:
             float: Average validation loss
         """
         raise NotImplementedError("Subclasses must implement _eval_epoch")
 
-    def train(self, epochs: int, train_loader: DataLoader, 
-              val_loader: Optional[DataLoader] = None, 
+    def train(self, epochs: int, train_loader: DataLoader,
+              val_loader: Optional[DataLoader] = None,
               early_stopping: int = 0,
               save_best: bool = True) -> Dict[str, List[float]]:
         """
         Train the model for multiple epochs.
-        
+
         Args:
             epochs: Number of epochs to train
             train_loader: DataLoader for training data
             val_loader: DataLoader for validation data (optional)
             early_stopping: Number of epochs to wait before early stopping (0 to disable)
             save_best: Whether to save the best model state
-            
+
         Returns:
             Dict containing training history
         """
@@ -85,34 +86,36 @@ class ModelTrainer(nn.Module):
     def test(self, test_loader: DataLoader) -> Dict[str, Any]:
         """
         Evaluate the model on test data.
-        
+
         Args:
             test_loader: DataLoader for test data
-            
+
         Returns:
             Dict containing test metrics
         """
         raise NotImplementedError("Subclasses must implement test")
-    
+
     def save_model(self, path: str) -> None:
         """
         Save the model to disk.
-        
+
         Args:
             path: Path to save the model
         """
-        torch.save({
+        save_dict = {
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'best_model_state': self.best_model_state,
             'history': self.history,
-        }, path)
+        }
+
+        torch.save(save_dict, path)
         self.logger.info(f"Model saved to {path}")
-    
+
     def load_model(self, path: str, load_best: bool = True) -> None:
         """
         Load the model from disk.
-        
+
         Args:
             path: Path to load the model from
             load_best: Whether to load the best model state
@@ -127,19 +130,3 @@ class ModelTrainer(nn.Module):
             self.history = checkpoint['history']
             self.best_model_state = checkpoint['best_model_state']
             self.logger.info(f"Loaded model from {path}")
-    
-    def predict(self, inputs: torch.Tensor) -> torch.Tensor:
-        """
-        Make predictions with the model.
-        
-        Args:
-            inputs: Input tensor
-            
-        Returns:
-            Model predictions
-        """
-        self.model.eval()
-        with torch.no_grad():
-            inputs = inputs.to(self.device)
-            outputs = self.model(inputs)
-        return outputs
