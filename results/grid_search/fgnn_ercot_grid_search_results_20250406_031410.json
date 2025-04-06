@@ -1,0 +1,261 @@
+{
+    "results": [
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 32,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 128,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.01
+            },
+            "val_loss": 1.3677973747253418,
+            "test_loss": 852525152.0,
+            "metrics": {
+                "mse": 853052864.0,
+                "rmse": 29207.068359375,
+                "mae": 21336.96484375,
+                "mape": 65.87017822265625,
+                "smape": 76.296875
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 32,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 128,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.05
+            },
+            "val_loss": 1.4342701435089111,
+            "test_loss": 354164512.0,
+            "metrics": {
+                "mse": 353889312.0,
+                "rmse": 18811.9453125,
+                "mae": 14725.1494140625,
+                "mape": 52.418033599853516,
+                "smape": 40.616973876953125
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 32,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 256,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.01
+            },
+            "val_loss": 2.6110024452209473,
+            "test_loss": 362433648.0,
+            "metrics": {
+                "mse": 362288352.0,
+                "rmse": 19033.873046875,
+                "mae": 15359.3408203125,
+                "mape": 48.65725326538086,
+                "smape": 53.7818603515625
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 32,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 256,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.05
+            },
+            "val_loss": 1.408215045928955,
+            "test_loss": 276968016.0,
+            "metrics": {
+                "mse": 276790336.0,
+                "rmse": 16637.017578125,
+                "mae": 13047.19921875,
+                "mape": 43.411529541015625,
+                "smape": 40.35870361328125
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 64,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 128,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.01
+            },
+            "val_loss": 1.8071891069412231,
+            "test_loss": 543186544.0,
+            "metrics": {
+                "mse": 543133760.0,
+                "rmse": 23305.23046875,
+                "mae": 17840.380859375,
+                "mape": 60.22113037109375,
+                "smape": 50.483314514160156
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 64,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 128,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.05
+            },
+            "val_loss": 1.402585744857788,
+            "test_loss": 389243824.0,
+            "metrics": {
+                "mse": 389177824.0,
+                "rmse": 19727.58984375,
+                "mae": 16011.3779296875,
+                "mape": 52.6021614074707,
+                "smape": 48.2607536315918
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 64,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 256,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.01
+            },
+            "val_loss": 1.3569262027740479,
+            "test_loss": 878086496.0,
+            "metrics": {
+                "mse": 877550592.0,
+                "rmse": 29623.48046875,
+                "mae": 24257.9375,
+                "mape": 80.05487060546875,
+                "smape": 79.67829132080078
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 64,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 256,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.05
+            },
+            "val_loss": 2.6793699264526367,
+            "test_loss": 545203040.0,
+            "metrics": {
+                "mse": 544948032.0,
+                "rmse": 23344.12109375,
+                "mae": 18872.314453125,
+                "mape": 63.0997428894043,
+                "smape": 66.54365539550781
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 128,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 128,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.01
+            },
+            "val_loss": 1.4126620292663574,
+            "test_loss": 469920320.0,
+            "metrics": {
+                "mse": 469517120.0,
+                "rmse": 21668.34375,
+                "mae": 17364.150390625,
+                "mape": 58.321903228759766,
+                "smape": 51.41912841796875
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 128,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 128,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.05
+            },
+            "val_loss": 3.05537748336792,
+            "test_loss": 651267840.0,
+            "metrics": {
+                "mse": 650697408.0,
+                "rmse": 25508.771484375,
+                "mae": 20669.546875,
+                "mape": 68.10015869140625,
+                "smape": 71.01097869873047
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 128,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 256,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.01
+            },
+            "val_loss": 1.9146395921707153,
+            "test_loss": 691056960.0,
+            "metrics": {
+                "mse": 690724992.0,
+                "rmse": 26281.646484375,
+                "mae": 21264.830078125,
+                "mape": 71.77033233642578,
+                "smape": 68.21321105957031
+            }
+        },
+        {
+            "params": {
+                "pre_length": 24,
+                "embed_size": 128,
+                "feature_size": 15,
+                "seq_length": 336,
+                "hidden_size": 256,
+                "hidden_size_factor": 1,
+                "sparsity_threshold": 0.05
+            },
+            "val_loss": 2.0550453662872314,
+            "test_loss": 1002277216.0,
+            "metrics": {
+                "mse": 1002583936.0,
+                "rmse": 31663.60546875,
+                "mae": 26009.80078125,
+                "mape": 82.82877349853516,
+                "smape": 93.7518081665039
+            }
+        }
+    ],
+    "best_params": {
+        "pre_length": 24,
+        "embed_size": 64,
+        "feature_size": 15,
+        "seq_length": 336,
+        "hidden_size": 256,
+        "hidden_size_factor": 1,
+        "sparsity_threshold": 0.01
+    },
+    "best_val_loss": 1.3569262027740479,
+    "best_test_metrics": {
+        "mse": 877550592.0,
+        "rmse": 29623.48046875,
+        "mae": 24257.9375,
+        "mape": 80.05487060546875,
+        "smape": 79.67829132080078
+    }
+}

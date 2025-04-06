@@ -65,6 +65,8 @@ def main(cfg_path):
             scheduler_type=config['scheduler'],
             save_name=config['save_name']
         )
+    elif job_type == 'single_model':
+        raise NotImplementedError()
 
 
 if __name__ == "__main__":

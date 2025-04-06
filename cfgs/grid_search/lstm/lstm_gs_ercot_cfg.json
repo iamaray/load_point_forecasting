@@ -1,0 +1,16 @@
+{
+  "model_name": "lstm",
+  "job_type": "grid_search",
+  "data_path": "data/datasets/ercot_data",
+  "lr": 0.001,
+  "epochs": 1,
+  "scheduler": "sinusoidal",
+  "save_name": "lstm_ercot",
+  "param_grid": {
+    "input_size": [15],
+    "hidden_size": [128, 256],
+    "num_layers": [2, 3, 4, 5],
+    "dropout": [0.1],
+    "forecast_length": [24]
+  }
+}

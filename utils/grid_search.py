@@ -112,6 +112,9 @@ def grid_search(
         logger.info(
             f"Metrics: RMSE={metrics['rmse']:.4f}, MAE={metrics['mae']:.4f}, MAPE={metrics['mape']:.4f}")
 
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
     logger.info(f"Grid search completed. Best parameters: {best_params}")
     logger.info(f"Best validation loss: {best_val_loss:.6f}")
     logger.info(f"Best test metrics: {best_test_metrics}")

@@ -1,13 +1,13 @@
 {
   "model_name": "ffnn",
   "job_type": "grid_search",
-  "data_path": "data/datasets/ercot_data",
+  "data_path": "data/datasets/us_homestead_data",
   "lr": 0.001,
   "epochs": 1,
   "scheduler": "sinusoidal",
-  "save_name": "ffnn",
+  "save_name": "ffnn_homestead",
   "param_grid": {
-    "input_size": [5040],
+    "input_size": [6384],
     "num_hidden": [2, 3, 4, 5],
     "hidden_size": [128, 256],
     "output_size": [24],

@@ -13,7 +13,6 @@ class FGN(nn.Module):
             hidden_size,
             # target_idx=0,
             is_univariate=True,
-            hard_thresholding_fraction=1,
             hidden_size_factor=1,
             sparsity_threshold=0.01,
             device=None):
@@ -29,7 +28,6 @@ class FGN(nn.Module):
         self.frequency_size = self.embed_size // self.number_frequency
         self.hidden_size_factor = hidden_size_factor
         self.sparsity_threshold = sparsity_threshold
-        self.hard_thresholding_fraction = hard_thresholding_fraction
         self.scale = 0.02
         self.embeddings = nn.Parameter(torch.randn(1, self.embed_size))
         # self.target_idx = target_idx

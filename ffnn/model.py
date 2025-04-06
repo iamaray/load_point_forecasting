@@ -33,6 +33,7 @@ class FFNN(nn.Module):
 
         for _ in range(num_hidden):
             layers.append(nn.Linear(prev_size, hidden_size))
+            layers.append(nn.LayerNorm(hidden_size))
             layers.append(nn.ReLU())
             if dropout > 0:
                 layers.append(nn.Dropout(dropout))

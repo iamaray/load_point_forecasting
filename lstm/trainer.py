@@ -12,7 +12,7 @@ from processing.transforms import *
 
 
 class LSTMTrainer(ModelTrainer):
-    def __init__(self, model, criterion=nn.MSELoss(), lr=0.001, scheduler=None, device='cpu'):
+    def __init__(self, model, criterion=nn.MSELoss(), optimizer=None, lr=0.001, scheduler=None, device='cpu'):
         """
         Trainer class for LSTM model.
 
@@ -23,7 +23,8 @@ class LSTMTrainer(ModelTrainer):
             scheduler: Learning rate scheduler (optional)
             device: Device to run training on
         """
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        optimizer = optimizer if optimizer is not None else torch.optim.Adam(
+            model.parameters(), lr=lr)
         super().__init__(model=model,
                          optimizer=optimizer,
                          criterion=criterion,
