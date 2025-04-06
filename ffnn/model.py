@@ -7,13 +7,14 @@ class FFNN(nn.Module):
     A simple feed-forward neural network (FFNN) for time series forecasting.
     """
 
-    def __init__(self, input_size, hidden_sizes, output_size, dropout=0.0, device=None):
+    def __init__(self, input_size, num_hidden, hidden_size, output_size, dropout=0.0, device=None):
         """
         Initialize the FFNN model.
 
         Args:
             input_size (int): Size of the input features
-            hidden_sizes (list): List of hidden layer sizes
+            num_hidden (int): Number of hidden layers
+            hidden_size (int): Size of each hidden layer
             output_size (int): Size of the output
             dropout (float): Dropout probability (0 to 1)
             device (torch.device): Device to run the model on
@@ -21,7 +22,8 @@ class FFNN(nn.Module):
         super(FFNN, self).__init__()
 
         self.input_size = input_size
-        self.hidden_sizes = hidden_sizes
+        self.num_hidden = num_hidden
+        self.hidden_size = hidden_size
         self.output_size = output_size
         self.device = device if device is not None else torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
@@ -29,7 +31,7 @@ class FFNN(nn.Module):
         layers = []
         prev_size = input_size
 
-        for hidden_size in hidden_sizes:
+        for _ in range(num_hidden):
             layers.append(nn.Linear(prev_size, hidden_size))
             layers.append(nn.ReLU())
             if dropout > 0:
@@ -46,9 +48,10 @@ class FFNN(nn.Module):
         Forward pass of the FFNN model.
 
         Args:
-            x (torch.Tensor): Input tensor of shape (batch_size, input_size)
+            x (torch.Tensor): Input tensor of shape (B, L, N)
 
         Returns:
             torch.Tensor: Output tensor of shape (batch_size, output_size)
         """
+        x = x.reshape(x.shape[0], -1)
         return self.model(x)

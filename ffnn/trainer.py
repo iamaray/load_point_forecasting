@@ -5,19 +5,21 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from typing import Dict, Any, Optional, Union, List, Tuple
 
+from processing.transforms import *
 from utils.templates import ModelTrainer
 from .model import FFNN
 
 
 class FFNNTrainer(ModelTrainer):
-    def __init__(self, model, criterion=nn.MSELoss(), lr=0.001, scheduler=None, device='cpu'):
+    def __init__(self, model, criterion=nn.MSELoss(), optimizer=None, lr=0.001, scheduler=None, device='cpu'):
         """
         Trainer class for Feed-Forward Neural Network model.
 
         Args:
             model: The FFNN model to train
         """
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        optimizer = optimizer if optimizer is not None else torch.optim.Adam(
+            model.parameters(), lr=lr)
 
         super().__init__(model=model,
                          optimizer=optimizer,
@@ -76,7 +78,7 @@ class FFNNTrainer(ModelTrainer):
                 x, y = x.to(self.device), y.to(self.device)
 
                 out = self.model(x)
-                loss = self.criterion(x, y)
+                loss = self.criterion(out, y)
 
                 val_loss += loss
                 num_batches += 1
@@ -103,7 +105,7 @@ class FFNNTrainer(ModelTrainer):
             epochs) if val_loader is not None else []
 
         self.logger.info(
-            f'Beginning FFNN Training on {epochs} epochs with initial lr {lr}.')
+            f'Beginning FFNN Training on {epochs} epochs with initial lr {self.lr}.')
 
         self.model.train()
 
@@ -116,7 +118,7 @@ class FFNNTrainer(ModelTrainer):
                 self.best_model_state = self.model.state_dict()
 
             self.logger.info(
-                f'Epoch {epoch+1}/{epochs} - Train Loss: {epoch_loss:.6f}, Val Loss: {val_loss:.6f}')
+                f'Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}')
 
         self.logger.info("Finished training model.")
         self.logger.info("Saving...")
@@ -125,11 +127,11 @@ class FFNNTrainer(ModelTrainer):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
             self.logger.info(f"Created directory: {save_dir}")
-        self.save_model(path=f"{savename}/{savename}.pt")
+        self.save_model(path=f"{save_dir}/{savename}.pt")
 
         return {'train_loss': self.history['train_loss'], 'val_loss': self.history['val_loss']}
 
-    def test(self, test_loader: DataLoader) -> Dict[str, Any]:
+    def test(self, test_loader: DataLoader, train_norm: DataTransform = None) -> Dict[str, Any]:
         """
         Evaluate the model on test data.
 
@@ -140,6 +142,11 @@ class FFNNTrainer(ModelTrainer):
             Dict containing test metrics including loss and predictions
         """
         self.model.eval()
+        if train_norm is not None:
+            train_norm.to(self.device)
+        else:
+            def train_norm(x): return x
+
         test_loss = 0.0
         num_batches = 0
         all_predictions = []
@@ -149,19 +156,31 @@ class FFNNTrainer(ModelTrainer):
             for x, y in test_loader:
                 x, y = x.to(self.device), y.to(self.device)
 
-                out = self.model(x)
-                loss = self.criterion(out, y)
+                x_transformed = None
+                try:
+                    x_transformed = train_norm.transform(x)
+                except:
+                    x_transformed = x
 
+                out = self.model(x_transformed)
+
+                out_reversed = None
+                try:
+                    out_reversed = train_norm.reverse(
+                        transformed=out.unsqueeze(-1)).squeeze()
+                except:
+                    out_reversed = out
+
+                loss = self.criterion(out_reversed, y)
                 test_loss += loss.item()
                 num_batches += 1
 
-                all_predictions.append(out.cpu())
+                all_predictions.append(out_reversed.cpu())
                 all_targets.append(y.cpu())
 
         avg_loss = test_loss / num_batches
         self.history['test_loss'] = avg_loss
 
-        # Concatenate all batches
         predictions = torch.cat(all_predictions, dim=0)
         targets = torch.cat(all_targets, dim=0)
 

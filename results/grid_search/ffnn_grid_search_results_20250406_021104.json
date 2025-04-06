@@ -1,0 +1,163 @@
+{
+    "results": [
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 2,
+                "hidden_size": 128,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.6512082815170288,
+            "test_loss": 101669304.0,
+            "metrics": {
+                "mse": 101651904.0,
+                "rmse": 10082.2568359375,
+                "mae": 8310.376953125,
+                "mape": 29.63707733154297,
+                "smape": 25.04590606689453
+            }
+        },
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 2,
+                "hidden_size": 256,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.49510157108306885,
+            "test_loss": 116073784.0,
+            "metrics": {
+                "mse": 116112976.0,
+                "rmse": 10775.5732421875,
+                "mae": 8917.916015625,
+                "mape": 31.63191032409668,
+                "smape": 26.489158630371094
+            }
+        },
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 3,
+                "hidden_size": 128,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.5654032230377197,
+            "test_loss": 99951448.0,
+            "metrics": {
+                "mse": 99945224.0,
+                "rmse": 9997.2607421875,
+                "mae": 8200.443359375,
+                "mape": 29.06029510498047,
+                "smape": 24.860279083251953
+            }
+        },
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 3,
+                "hidden_size": 256,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.4195265769958496,
+            "test_loss": 103668980.0,
+            "metrics": {
+                "mse": 103743400.0,
+                "rmse": 10185.4501953125,
+                "mae": 8377.38671875,
+                "mape": 29.69289207458496,
+                "smape": 25.03440284729004
+            }
+        },
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 4,
+                "hidden_size": 128,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.5563784241676331,
+            "test_loss": 108369416.0,
+            "metrics": {
+                "mse": 108400176.0,
+                "rmse": 10411.5400390625,
+                "mae": 8585.572265625,
+                "mape": 29.846033096313477,
+                "smape": 25.74361228942871
+            }
+        },
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 4,
+                "hidden_size": 256,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.40870118141174316,
+            "test_loss": 99394244.0,
+            "metrics": {
+                "mse": 99424000.0,
+                "rmse": 9971.158203125,
+                "mae": 8244.4013671875,
+                "mape": 29.10847282409668,
+                "smape": 24.792598724365234
+            }
+        },
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 5,
+                "hidden_size": 128,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.6132792830467224,
+            "test_loss": 104573012.0,
+            "metrics": {
+                "mse": 104584264.0,
+                "rmse": 10226.64453125,
+                "mae": 8450.7138671875,
+                "mape": 29.749650955200195,
+                "smape": 25.476598739624023
+            }
+        },
+        {
+            "params": {
+                "input_size": 5040,
+                "num_hidden": 5,
+                "hidden_size": 256,
+                "output_size": 24,
+                "dropout": 0.2
+            },
+            "val_loss": 0.38629984855651855,
+            "test_loss": 101045028.0,
+            "metrics": {
+                "mse": 101115192.0,
+                "rmse": 10055.60546875,
+                "mae": 8291.1513671875,
+                "mape": 29.29894256591797,
+                "smape": 24.72603988647461
+            }
+        }
+    ],
+    "best_params": {
+        "input_size": 5040,
+        "num_hidden": 5,
+        "hidden_size": 256,
+        "output_size": 24,
+        "dropout": 0.2
+    },
+    "best_val_loss": 0.38629984855651855,
+    "best_test_metrics": {
+        "mse": 101115192.0,
+        "rmse": 10055.60546875,
+        "mae": 8291.1513671875,
+        "mape": 29.29894256591797,
+        "smape": 24.72603988647461
+    }
+}

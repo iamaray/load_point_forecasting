@@ -135,6 +135,5 @@ def calculate_all_metrics(y_true: Union[np.ndarray, torch.Tensor],
         'rmse': rmse(y_true, y_pred),
         'mae': mae(y_true, y_pred),
         'mape': mape(y_true, y_pred),
-        'smape': smape(y_true, y_pred),
-        'r2': r2_score(y_true, y_pred)
+        'smape': smape(y_true, y_pred)
     }

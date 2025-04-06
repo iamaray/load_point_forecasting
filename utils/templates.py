@@ -5,6 +5,9 @@ import numpy as np
 import time
 import logging
 from typing import Dict, Any, Optional, Union, List, Tuple
+from dataclasses import dataclass
+
+from processing.transforms import DataTransform
 
 
 class ModelTrainer(nn.Module):
@@ -83,7 +86,7 @@ class ModelTrainer(nn.Module):
         """
         raise NotImplementedError("Subclasses must implement train")
 
-    def test(self, test_loader: DataLoader) -> Dict[str, Any]:
+    def test(self, test_loader: DataLoader, train_norm: DataTransform) -> Dict[str, Any]:
         """
         Evaluate the model on test data.
 
@@ -130,3 +133,30 @@ class ModelTrainer(nn.Module):
             self.history = checkpoint['history']
             self.best_model_state = checkpoint['best_model_state']
             self.logger.info(f"Loaded model from {path}")
+
+
+@dataclass
+class ModelTestOut:
+    test_loss: float
+    predictions: List[float]
+    targets: List[float]
+    mse: float
+    rmse: float
+    mae: float
+    mape: float
+    smape: float
+
+
+@dataclass
+class FFNNConfig:
+    fag: str
+
+
+@dataclass
+class LSTMConfig:
+    fag: str
+
+
+@dataclass
+class FGNNConfig:
+    fag: str

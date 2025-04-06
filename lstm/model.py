@@ -7,8 +7,15 @@ class LSTMWrapper(nn.LSTM):
     A simple wrapper around PyTorch's LSTM module.
     """
 
-    def __init__(self, input_size, hidden_size, num_layers=1, dropout=0.0,
-                 bidirectional=False, batch_first=True, device=None):
+    def __init__(self,
+                 input_size,
+                 hidden_size,
+                 num_layers=1,
+                 dropout=0.0,
+                 forecast_length=24,
+                 bidirectional=False,
+                 batch_first=True,
+                 device=None):
         """
         Initialize the LSTM wrapper.
 
@@ -20,6 +27,10 @@ class LSTMWrapper(nn.LSTM):
             bidirectional (bool): If True, becomes a bidirectional LSTM
             batch_first (bool): If True, input and output tensors are (batch, seq, feature)
         """
+        self.device = device
+        if self.device is None:
+            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
         super(LSTMWrapper, self).__init__(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -29,10 +40,10 @@ class LSTMWrapper(nn.LSTM):
             batch_first=batch_first,
             device=device
         )
-
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = hidden_size * 2 if bidirectional else hidden_size
+        self.forecast_head = nn.Linear(self.output_size, forecast_length)
 
     def init_hidden(self, batch_size):
         """
@@ -64,4 +75,9 @@ class LSTMWrapper(nn.LSTM):
         """
         if hidden is None:
             hidden = self.init_hidden(x.size(0))
-        return super(LSTMWrapper, self).forward(x, hidden)
+        outputs, hidden = super(LSTMWrapper, self).forward(x, hidden)
+
+        last_output = outputs[:, -1, :]  # [batch_size, hidden_size]
+        forecast = self.forecast_head(last_output)
+
+        return forecast, hidden

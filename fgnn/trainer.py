@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from typing import Dict, Any, Optional, Union, List, Tuple
 import logging
 
+from processing.transforms import *
 from utils.templates import ModelTrainer
 from .model import FGN
 
@@ -46,12 +47,12 @@ class FGNNTrainer(ModelTrainer):
         epoch_loss = 0.0
         num_batches = 0
 
-        for data in train_loader:
-            data = data.to(self.device)
+        for (x, y) in train_loader:
+            x = x.to(self.device)
             self.optimizer.zero_grad()
 
-            out = self.model(data)
-            loss = self.criterion(out, data.y)
+            out = self.model(x)
+            loss = self.criterion(out, y)
 
             loss.backward()
             self.optimizer.step()
@@ -84,10 +85,10 @@ class FGNNTrainer(ModelTrainer):
         num_batches = 0
 
         with torch.no_grad():
-            for data in val_loader:
-                data = data.to(self.device)
-                out = self.model(data)
-                loss = self.criterion(out, data.y)
+            for (x, y) in val_loader:
+                x = x.to(self.device)
+                out = self.model(x)
+                loss = self.criterion(out, y)
                 val_loss += loss.item()
                 num_batches += 1
 
@@ -134,8 +135,9 @@ class FGNNTrainer(ModelTrainer):
                 self.best_loss = val_loss
                 self.best_model_state = self.model.state_dict()
 
+            val_loss_str = f"{val_loss:.6f}" if val_loss is not None else "N/A"
             self.logger.info(
-                f'Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f if val_loss is not None else "N/A"}')
+                f'Epoch {epoch+1}/{epochs} - Train Loss: {train_loss:.6f}, Val Loss: {val_loss_str}')
 
         self.logger.info("Finished training model.")
         self.logger.info("Saving...")
@@ -148,38 +150,58 @@ class FGNNTrainer(ModelTrainer):
 
         return {'train_loss': self.history['train_loss'], 'val_loss': self.history['val_loss']}
 
-    def test(self, test_loader: DataLoader) -> Dict[str, Any]:
+    def test(self, test_loader: DataLoader, train_norm: DataTransform = None) -> Dict[str, Any]:
         """
         Evaluate the model on test data.
 
         Args:
             test_loader: DataLoader for test data
+            train_norm: Optional data transformation
 
         Returns:
             Dict containing test metrics including loss and predictions
         """
         self.model.eval()
+        if train_norm is not None:
+            train_norm.to(self.device)
+        else:
+            def train_norm(x): return x
+
         test_loss = 0.0
         num_batches = 0
         all_predictions = []
         all_targets = []
 
         with torch.no_grad():
-            for data in test_loader:
-                data = data.to(self.device)
-                out = self.model(data)
-                loss = self.criterion(out, data.y)
+            for (x, y) in test_loader:
+                x = x.to(self.device)
+
+                x_transformed = None
+                try:
+                    x_transformed = train_norm.transform(x)
+                except:
+                    x_transformed = x
+
+                out = self.model(x_transformed)
+
+                out_reversed = None
+                try:
+                    out_reversed = train_norm.reverse(
+                        transformed=out.unsqueeze(-1)).squeeze()
+                except:
+                    out_reversed = out
+
+                loss = self.criterion(out_reversed, y)
 
                 test_loss += loss.item()
                 num_batches += 1
 
-                all_predictions.append(out.cpu())
-                all_targets.append(data.y.cpu())
+                all_predictions.append(out_reversed.cpu())
+                all_targets.append(y.cpu())
 
         avg_loss = test_loss / num_batches
         self.history['test_loss'] = avg_loss
 
-        # Concatenate all batches
         predictions = torch.cat(all_predictions, dim=0)
         targets = torch.cat(all_targets, dim=0)
 
