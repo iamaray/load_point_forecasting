@@ -1,17 +1,17 @@
 {
   "model_name": "fgnn",
   "job_type": "grid_search",
-  "data_path": "data/datasets/us_homestead_data",
+  "data_path": "data/datasets/spain_data",
   "lr": 0.001,
   "epochs": 70,
   "scheduler": "sinusoidal",
-  "save_name": "fgnn_homestead",
+  "save_name": "fgnn_spain",
   "param_grid": {
     "pre_length": [24],
-    "embed_size": [32],
-    "feature_size": [19],
+    "embed_size": [32, 64, 128],
+    "feature_size": [9],
     "seq_length": [336],
-    "hidden_size": [128],
+    "hidden_size": [128, 256],
     "hidden_size_factor": [1],
     "sparsity_threshold": [0.01, 0.05]
   }
