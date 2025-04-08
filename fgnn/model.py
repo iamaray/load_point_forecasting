@@ -54,7 +54,7 @@ class FGN(nn.Module):
                     self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor, self.frequency_size)))
                 self.biases.append(nn.Parameter(
                     self.scale * torch.randn(2, self.frequency_size)))
-            else: 
+            else:
                 self.weights.append(nn.Parameter(
                     self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor,
                                              self.frequency_size * self.hidden_size_factor)))
@@ -150,12 +150,23 @@ class FGN(nn.Module):
         x = x.reshape(B, -1)
 
         # embedding B*NL ==> B*NL*D
-        x = self.tokenEmb(x)
+        x = self.tokenEmb(x)  # [B, N*L, embed_size]
 
-        # FFT B*NL*D ==> B*NT/2*D
+        # [B, N*L, number_frequency, frequency_size]
+        x = x.reshape(B, -1, self.number_frequency, self.frequency_size)
+        x = x.permute(0, 2, 1, 3)  # [B, number_frequency, N*L, frequency_size]
+        # [B*number_frequency, N*L, frequency_size]
+        x = x.reshape(B * self.number_frequency, -1, self.frequency_size)
+
+        # [B*number_frequency, (N*L)//2 + 1, frequency_size]
         x = torch.fft.rfft(x, dim=1, norm=self.fft_norm)
 
-        x = x.reshape(B, (N*L)//2 + 1, self.frequency_size)
+        # [B, number_frequency, (N*L)//2 + 1, frequency_size]
+        x = x.reshape(B, self.number_frequency, -1, self.frequency_size)
+        # [B, (N*L)//2 + 1, number_frequency, frequency_size]
+        x = x.permute(0, 2, 1, 3)
+        # [B, (N*L)//2 + 1, frequency_size]
+        x = x.reshape(B, -1, self.frequency_size)
 
         bias = x
 

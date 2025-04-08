@@ -94,7 +94,7 @@ def grid_search(
             test_loader=test_loader, train_norm=train_norm)
 
         plot_test_samples(
-            n_samples=15,
+            n_samples=10,
             predicted_samples=test_results['predictions'],
             target_samples=test_results['targets'],
             i=i,
@@ -120,11 +120,18 @@ def grid_search(
             best_test_metrics = metrics
             best_model_state = trainer.best_model_state
             best_idx = i
+            logger.info("")
+            logger.info(
+                f"New best model found at combination {i+1}/{len(param_combs)}")
+            logger.info(f"Best val loss so far: {best_val_loss:.6f}")
+            logger.info(
+                f"Best metrics so far: RMSE={best_test_metrics['rmse']:.4f}, MAE={best_test_metrics['mae']:.4f}, MAPE={best_test_metrics['mape']:.4f}, SMAPE={best_test_metrics['smape']:.4f}")
+            logger.info("")
 
         logger.info(
             f"Completed combination {i+1} - Val Loss: {result['val_loss']:.6f}, Test Loss: {result['test_loss']:.6f}")
         logger.info(
-            f"Metrics: RMSE={metrics['rmse']:.4f}, MAE={metrics['mae']:.4f}, MAPE={metrics['mape']:.4f}")
+            f"Metrics: RMSE={metrics['rmse']:.4f}, MAE={metrics['mae']:.4f}, MAPE={metrics['mape']:.4f}, SMAPE={metrics['smape']:.4f}")
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

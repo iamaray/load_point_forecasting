@@ -3,14 +3,14 @@
   "job_type": "grid_search",
   "data_path": "data/datasets/elia_data",
   "lr": 0.001,
-  "epochs": 70,
+  "epochs": 50,
   "scheduler": "sinusoidal",
   "save_name": "lstm_elia",
   "param_grid": {
     "input_size": [9],
     "num_layers": [2, 3, 4, 5],
-    "hidden_size": [64, 128, 256],
-    "output_size": [24],
+    "hidden_size": [128, 256],
+    "output_size": [96],
     "dropout": [0.2]
   }
 }
