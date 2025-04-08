@@ -11,8 +11,8 @@ class FGN(nn.Module):
             feature_size,
             seq_length,
             hidden_size,
-            # target_idx=0,
-            is_univariate=True,
+            target_idx=0,
+            # is_univariate=True,
             hidden_size_factor=1,
             sparsity_threshold=0.01,
             device=None):
@@ -30,7 +30,7 @@ class FGN(nn.Module):
         self.sparsity_threshold = sparsity_threshold
         self.scale = 0.02
         self.embeddings = nn.Parameter(torch.randn(1, self.embed_size))
-        # self.target_idx = target_idx
+        self.target_idx = target_idx
         self.device = device
 
         self.w1 = nn.Parameter(
@@ -55,10 +55,10 @@ class FGN(nn.Module):
             nn.Linear(self.hidden_size, self.pre_length)
         )
 
-        self.univariate_output_head = None
-        if is_univariate:
-            self.univariate_output_head = nn.Linear(
-                feature_size * pre_length, pre_length)
+        # self.univariate_output_head = None
+        # if is_univariate:
+        #     self.univariate_output_head = nn.Linear(
+        #         feature_size * pre_length, pre_length)
 
         if self.device is None:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -168,10 +168,10 @@ class FGN(nn.Module):
         x = x.reshape(B, N, -1)
         x = self.fc(x)
 
-        # if hasattr(self, 'target_idx'):
-        #     return x[:, self.target_idx, :]
-        if self.univariate_output_head is not None:
-            x = x.reshape(B, -1)
-            x = self.univariate_output_head(x)
+        if hasattr(self, 'target_idx'):
+            return x[:, self.target_idx, :]
+        # if self.univariate_output_head is not None:
+        #     x = x.reshape(B, -1)
+        #     x = self.univariate_output_head(x)
 
         return x

@@ -1,0 +1,17 @@
+{
+    "model_name": "ffnn",
+    "job_type": "grid_search",
+    "data_path": "data/datasets/elia_data",
+    "lr": 0.001,
+    "epochs": 20,
+    "scheduler": "sinusoidal",
+    "save_name": "ffnn_elia",
+    "param_grid": {
+      "input_size": [3024],
+      "num_hidden": [2],
+      "hidden_size": [128],
+      "output_size": [24],
+      "dropout": [0.2]
+    }
+  }
+  

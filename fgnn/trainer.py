@@ -23,7 +23,8 @@ class FGNNTrainer(ModelTrainer):
             scheduler: Learning rate scheduler (optional)
             device: Device to run training on
         """
-        optimizer = optimizer if optimizer is not None else torch.optim.Adam(model.parameters(), lr=lr)
+        optimizer = optimizer if optimizer is not None else torch.optim.Adam(
+            model.parameters(), lr=lr)
         super().__init__(model=model,
                          optimizer=optimizer,
                          criterion=criterion,

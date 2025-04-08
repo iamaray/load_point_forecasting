@@ -58,6 +58,9 @@ datasets/
 *.csv
 *.h5
 
+# Misc
+papers/
+
 # Model checkpoints
 checkpoints/
 runs/

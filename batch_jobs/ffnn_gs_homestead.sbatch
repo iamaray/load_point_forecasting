@@ -10,7 +10,7 @@
 #SBATCH --mail-user=anahri3@gatech.edu           # E-mail address for notifications
 #SBATCH --gres=gpu:H100:1
 
-cd $HOME/probabilistic_load_forecasting               # Change to working directory created in $HOME
+cd $HOME/load_point_forecasting               # Change to working directory created in $HOME
 
 # Conda env
 module load anaconda3

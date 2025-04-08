@@ -12,6 +12,8 @@ from .metrics import calculate_all_metrics
 from processing.transforms import *
 from .templates import ModelTrainer
 
+from matplotlib import pyplot as plt
+
 
 def split_param_grid(param_grid):
     if not param_grid:
@@ -61,6 +63,7 @@ def grid_search(
     best_val_loss = float('inf')
     best_params = None
     best_test_metrics = None
+    best_model_state = None
 
     logger.info(
         f"Starting grid search with {len(param_combs)} parameter combinations")
@@ -84,10 +87,18 @@ def grid_search(
             model=model, optimizer=optimizer, lr=lr, scheduler=scheduler)
 
         history = trainer.train(epochs=epochs, train_loader=train_loader,
-                                val_loader=val_loader, save_best=False)
+                                val_loader=val_loader, save_best=True)
 
         test_results = trainer.test(
             test_loader=test_loader, train_norm=train_norm)
+
+        plot_test_samples(
+            n_samples=15,
+            predicted_samples=test_results['predictions'],
+            target_samples=test_results['targets'],
+            i=i,
+            save_name=save_name,
+            logger=logger)
 
         metrics = calculate_all_metrics(
             y_pred=test_results['predictions'].numpy(),
@@ -106,6 +117,7 @@ def grid_search(
             best_val_loss = result['val_loss']
             best_params = params
             best_test_metrics = metrics
+            best_model_state = trainer.best_model_state
 
         logger.info(
             f"Completed combination {i+1} - Val Loss: {result['val_loss']:.6f}, Test Loss: {result['test_loss']:.6f}")
@@ -125,6 +137,13 @@ def grid_search(
         'best_val_loss': best_val_loss,
         'best_test_metrics': best_test_metrics
     }
+
+    save_dir = f"modelsave/grid_search"
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+        logger.info(f"Created directory: {save_dir}")
+    torch.save(best_model_state, f"{save_dir}/{save_name}_gs.pt")
+
     save_results_to_json(result_dict, save_name, logger)
 
     return result_dict
@@ -167,3 +186,26 @@ def save_results_to_json(result_dict, savename, logger):
         json.dump(serializable_results, f, indent=4)
 
     logger.info(f"Results saved to {filename}")
+
+
+def plot_test_samples(n_samples, predicted_samples, target_samples, i, save_name, logger):
+    plt.figure(figsize=(12, 6))
+
+    targets_concat = target_samples[:n_samples].reshape(-1).numpy()
+    predictions_concat = predicted_samples[:n_samples].reshape(
+        -1).numpy()
+
+    plt.plot(targets_concat, label='Actual', alpha=0.7)
+    plt.plot(predictions_concat, label='Predicted', alpha=0.7)
+    plt.title(
+        f'Actual vs Predicted (First {n_samples} Samples) - Combination {i+1}')
+    plt.xlabel('Time Steps')
+    plt.ylabel('Value')
+    plt.legend()
+    plots_dir = f"results/grid_search/plots/{save_name}"
+    os.makedirs(plots_dir, exist_ok=True)
+
+    plt_filename = f"{plots_dir}/combination_{i+1}.png"
+    plt.savefig(plt_filename)
+    plt.close()
+    logger.info(f"Saved prediction plot to {plt_filename}")
