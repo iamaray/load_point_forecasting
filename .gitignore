@@ -57,6 +57,7 @@ data/
 datasets/
 *.csv
 *.h5
+*.png
 
 # Misc
 papers/
