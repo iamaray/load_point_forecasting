@@ -64,6 +64,7 @@ def grid_search(
     best_params = None
     best_test_metrics = None
     best_model_state = None
+    best_idx = 0
 
     logger.info(
         f"Starting grid search with {len(param_combs)} parameter combinations")
@@ -118,6 +119,7 @@ def grid_search(
             best_params = params
             best_test_metrics = metrics
             best_model_state = trainer.best_model_state
+            best_idx = i
 
         logger.info(
             f"Completed combination {i+1} - Val Loss: {result['val_loss']:.6f}, Test Loss: {result['test_loss']:.6f}")
@@ -144,12 +146,12 @@ def grid_search(
         logger.info(f"Created directory: {save_dir}")
     torch.save(best_model_state, f"{save_dir}/{save_name}_gs.pt")
 
-    save_results_to_json(result_dict, save_name, logger)
+    save_results_to_json(result_dict, save_name, logger, best_idx)
 
     return result_dict
 
 
-def save_results_to_json(result_dict, savename, logger):
+def save_results_to_json(result_dict, savename, logger, best_num):
     """
     Save grid search results to a JSON file.
 
@@ -178,7 +180,8 @@ def save_results_to_json(result_dict, savename, logger):
         'best_params': {k: str(v) if isinstance(v, (torch.Tensor, np.ndarray)) else v
                         for k, v in result_dict['best_params'].items()},
         'best_val_loss': float(result_dict['best_val_loss']),
-        'best_test_metrics': {k: float(v) for k, v in result_dict['best_test_metrics'].items()}
+        'best_test_metrics': {k: float(v) for k, v in result_dict['best_test_metrics'].items()},
+        'combination': best_num
     }
 
     filename = f"{results_dir}/{savename}_grid_search_results_{timestamp}.json"
