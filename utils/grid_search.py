@@ -85,7 +85,7 @@ def grid_search(
                 optimizer, mode='min', factor=0.5, patience=5)
 
         trainer = trainer_class(
-            model=model, optimizer=optimizer, lr=lr, scheduler=scheduler)
+            model=model, optimizer=optimizer, lr=lr, scheduler=scheduler, device=model.device)
 
         history = trainer.train(epochs=epochs, train_loader=train_loader,
                                 val_loader=val_loader, save_best=True)

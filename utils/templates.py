@@ -23,13 +23,12 @@ class ModelTrainer(nn.Module):
             device: Device to run training on (defaults to GPU if available)
         """
         super(ModelTrainer, self).__init__()
-        self.model = model
         self.optimizer = optimizer
         self.criterion = criterion if criterion is not None else nn.MSELoss()
         self.scheduler = scheduler
         self.device = device if device is not None else torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
-        self.model.to(self.device)
+        self.model = model.to(self.device)
         self.best_model_state = None
         self.best_loss = float('inf')
         self.history = {'train_loss': [], 'val_loss': [], 'test_loss': None}

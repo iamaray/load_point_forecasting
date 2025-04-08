@@ -12,7 +12,10 @@
     "feature_size": [9],
     "seq_length": [336],
     "hidden_size": [128, 256],
-    "hidden_size_factor": [1],
-    "sparsity_threshold": [0.01, 0.05]
+    "hidden_size_factor": [1, 2],
+    "sparsity_threshold": [0.01, 0.05],
+    "number_frequency": [1, 2, 4],
+    "init_scale": [0.01, 0.02, 0.05, 10],
+    "embedding_dim": [8, 16]
   }
 }

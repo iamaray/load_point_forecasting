@@ -44,6 +44,8 @@ class LSTMWrapper(nn.LSTM):
         self.hidden_size = hidden_size
         self.output_size = hidden_size * 2 if bidirectional else hidden_size
         self.forecast_head = nn.Linear(self.output_size, forecast_length)
+        
+        self.to(self.device)
 
     def init_hidden(self, batch_size):
         """
@@ -58,12 +60,9 @@ class LSTMWrapper(nn.LSTM):
         num_directions = 2 if self.bidirectional else 1
 
         h0 = torch.zeros(self.num_layers * num_directions,
-                         batch_size, self.hidden_size)
+                         batch_size, self.hidden_size, device=self.device)
         c0 = torch.zeros(self.num_layers * num_directions,
-                         batch_size, self.hidden_size)
-
-        h0 = h0.to(self.device)
-        c0 = c0.to(self.device)
+                         batch_size, self.hidden_size, device=self.device)
 
         return (h0, c0)
 
@@ -73,8 +72,13 @@ class LSTMWrapper(nn.LSTM):
         x: (batch_size, seq_len, input_size)
         hidden: (num_layers * num_directions, batch_size, hidden_size)
         """
-        if hidden is None:
+        x = x.to(self.device)
+
+        if hidden is not None:
+            hidden = (hidden[0].to(self.device), hidden[1].to(self.device))
+        else:
             hidden = self.init_hidden(x.size(0))
+
         outputs, hidden = super(LSTMWrapper, self).forward(x, hidden)
 
         last_output = outputs[:, -1, :]  # [batch_size, hidden_size]

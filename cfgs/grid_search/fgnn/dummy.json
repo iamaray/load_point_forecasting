@@ -3,7 +3,7 @@
   "job_type": "grid_search",
   "data_path": "data/datasets/elia_data",
   "lr": 0.001,
-  "epochs": 20,
+  "epochs": 1,
   "scheduler": "sinusoidal",
   "save_name": "fgnn_elia",
   "param_grid": {
@@ -13,6 +13,9 @@
     "seq_length": [336],
     "hidden_size": [128],
     "hidden_size_factor": [1],
-    "sparsity_threshold": [0.01]
+    "sparsity_threshold": [0.01],
+    "number_frequency": [1, 2, 4],
+    "init_scale": [0.01, 0.02, 0.05, 10],
+    "embedding_dim": [8, 16]
   }
 }

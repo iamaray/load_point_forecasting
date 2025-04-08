@@ -12,53 +12,64 @@ class FGN(nn.Module):
             seq_length,
             hidden_size,
             target_idx=0,
-            # is_univariate=True,
             hidden_size_factor=1,
             sparsity_threshold=0.01,
-            device=None):
+            device=None,
+            number_frequency=1,
+            init_scale=0.02,
+            embedding_dim=8,
+            fc_hidden_dim=64,
+            fft_norm='ortho',
+            num_layers=3):
 
         super(FGN, self).__init__()
 
         self.embed_size = embed_size
         self.hidden_size = hidden_size
-        self.number_frequency = 1
+        self.number_frequency = number_frequency
         self.pre_length = pre_length
         self.feature_size = feature_size
         self.seq_length = seq_length
         self.frequency_size = self.embed_size // self.number_frequency
         self.hidden_size_factor = hidden_size_factor
         self.sparsity_threshold = sparsity_threshold
-        self.scale = 0.02
+        self.scale = init_scale
         self.embeddings = nn.Parameter(torch.randn(1, self.embed_size))
         self.target_idx = target_idx
         self.device = device
+        self.fft_norm = fft_norm
+        self.num_layers = num_layers
 
-        self.w1 = nn.Parameter(
-            self.scale * torch.randn(2, self.frequency_size, self.frequency_size * self.hidden_size_factor))
-        self.b1 = nn.Parameter(
-            self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor))
-        self.w2 = nn.Parameter(
-            self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor, self.frequency_size))
-        self.b2 = nn.Parameter(
-            self.scale * torch.randn(2, self.frequency_size))
-        self.w3 = nn.Parameter(
-            self.scale * torch.randn(2, self.frequency_size,
-                                     self.frequency_size * self.hidden_size_factor))
-        self.b3 = nn.Parameter(
-            self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor))
-        self.embeddings_10 = nn.Parameter(torch.randn(self.seq_length, 8))
+        self.weights = nn.ParameterList()
+        self.biases = nn.ParameterList()
+
+        for i in range(num_layers):
+            if i == 0:
+                self.weights.append(nn.Parameter(
+                    self.scale * torch.randn(2, self.frequency_size, self.frequency_size * self.hidden_size_factor)))
+                self.biases.append(nn.Parameter(
+                    self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor)))
+            elif i == num_layers - 1:
+                self.weights.append(nn.Parameter(
+                    self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor, self.frequency_size)))
+                self.biases.append(nn.Parameter(
+                    self.scale * torch.randn(2, self.frequency_size)))
+            else: 
+                self.weights.append(nn.Parameter(
+                    self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor,
+                                             self.frequency_size * self.hidden_size_factor)))
+                self.biases.append(nn.Parameter(
+                    self.scale * torch.randn(2, self.frequency_size * self.hidden_size_factor)))
+
+        self.embeddings_10 = nn.Parameter(
+            torch.randn(self.seq_length, embedding_dim))
         self.fc = nn.Sequential(
-            nn.Linear(self.embed_size * 8, 64),
+            nn.Linear(self.embed_size * embedding_dim, fc_hidden_dim),
             nn.LeakyReLU(),
-            nn.Linear(64, self.hidden_size),
+            nn.Linear(fc_hidden_dim, self.hidden_size),
             nn.LeakyReLU(),
             nn.Linear(self.hidden_size, self.pre_length)
         )
-
-        # self.univariate_output_head = None
-        # if is_univariate:
-        #     self.univariate_output_head = nn.Linear(
-        #         feature_size * pre_length, pre_length)
 
         if self.device is None:
             self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -71,80 +82,78 @@ class FGN(nn.Module):
 
     # FourierGNN
     def fourierGC(self, x, B, N, L):
-        o1_real = torch.zeros([B, (N*L)//2 + 1, self.frequency_size * self.hidden_size_factor],
-                              device=x.device)
-        o1_imag = torch.zeros([B, (N*L)//2 + 1, self.frequency_size * self.hidden_size_factor],
-                              device=x.device)
-        o2_real = torch.zeros(x.shape, device=x.device)
-        o2_imag = torch.zeros(x.shape, device=x.device)
+        # Initialize output tensors
+        o_real = torch.zeros([B, (N*L)//2 + 1, self.frequency_size * self.hidden_size_factor],
+                             device=x.device)
+        o_imag = torch.zeros([B, (N*L)//2 + 1, self.frequency_size * self.hidden_size_factor],
+                             device=x.device)
 
-        o3_real = torch.zeros(x.shape, device=x.device)
-        o3_imag = torch.zeros(x.shape, device=x.device)
-
-        o1_real = F.relu(
-            torch.einsum('bli,ii->bli', x.real, self.w1[0]) -
-            torch.einsum('bli,ii->bli', x.imag, self.w1[1]) +
-            self.b1[0]
+        # First layer
+        o_real = F.relu(
+            torch.einsum('bli,ii->bli', x.real, self.weights[0][0]) -
+            torch.einsum('bli,ii->bli', x.imag, self.weights[0][1]) +
+            self.biases[0][0]
+        )
+        o_imag = F.relu(
+            torch.einsum('bli,ii->bli', x.imag, self.weights[0][0]) +
+            torch.einsum('bli,ii->bli', x.real, self.weights[0][1]) +
+            self.biases[0][1]
         )
 
-        o1_imag = F.relu(
-            torch.einsum('bli,ii->bli', x.imag, self.w1[0]) +
-            torch.einsum('bli,ii->bli', x.real, self.w1[1]) +
-            self.b1[1]
-        )
-
-        # 1 layer
-        y = torch.stack([o1_real, o1_imag], dim=-1)
+        # First layer output
+        y = torch.stack([o_real, o_imag], dim=-1)
         y = F.softshrink(y, lambd=self.sparsity_threshold)
+        prev_output = y
 
-        o2_real = F.relu(
-            torch.einsum('bli,ii->bli', o1_real, self.w2[0]) -
-            torch.einsum('bli,ii->bli', o1_imag, self.w2[1]) +
-            self.b2[0]
+        # Middle layers
+        for i in range(1, self.num_layers - 1):
+            o_real = F.relu(
+                torch.einsum('bli,ii->bli', o_real, self.weights[i][0]) -
+                torch.einsum('bli,ii->bli', o_imag, self.weights[i][1]) +
+                self.biases[i][0]
+            )
+            o_imag = F.relu(
+                torch.einsum('bli,ii->bli', o_imag, self.weights[i][0]) +
+                torch.einsum('bli,ii->bli', o_real, self.weights[i][1]) +
+                self.biases[i][1]
+            )
+
+            x = torch.stack([o_real, o_imag], dim=-1)
+            x = F.softshrink(x, lambd=self.sparsity_threshold)
+            x = x + prev_output
+            prev_output = x
+
+        # Last layer
+        o_real = F.relu(
+            torch.einsum('bli,ii->bli', o_real, self.weights[-1][0]) -
+            torch.einsum('bli,ii->bli', o_imag, self.weights[-1][1]) +
+            self.biases[-1][0]
+        )
+        o_imag = F.relu(
+            torch.einsum('bli,ii->bli', o_imag, self.weights[-1][0]) +
+            torch.einsum('bli,ii->bli', o_real, self.weights[-1][1]) +
+            self.biases[-1][1]
         )
 
-        o2_imag = F.relu(
-            torch.einsum('bli,ii->bli', o1_imag, self.w2[0]) +
-            torch.einsum('bli,ii->bli', o1_real, self.w2[1]) +
-            self.b2[1]
-        )
-
-        # 2 layer
-        x = torch.stack([o2_real, o2_imag], dim=-1)
-        x = F.softshrink(x, lambd=self.sparsity_threshold)
-        x = x + y
-
-        o3_real = F.relu(
-            torch.einsum('bli,ii->bli', o2_real, self.w3[0]) -
-            torch.einsum('bli,ii->bli', o2_imag, self.w3[1]) +
-            self.b3[0]
-        )
-
-        o3_imag = F.relu(
-            torch.einsum('bli,ii->bli', o2_imag, self.w3[0]) +
-            torch.einsum('bli,ii->bli', o2_real, self.w3[1]) +
-            self.b3[1]
-        )
-
-        # 3 layer
-        z = torch.stack([o3_real, o3_imag], dim=-1)
+        z = torch.stack([o_real, o_imag], dim=-1)
         z = F.softshrink(z, lambd=self.sparsity_threshold)
-        z = z + x
+        z = z + prev_output
         z = torch.view_as_complex(z)
         return z
 
     def forward(self, x):
-
+        # B*N*L ==> B*N*L
         x = x.permute(0, 2, 1).contiguous()
-        # x = x.contiguous()
         B, N, L = x.shape
+
         # B*N*L ==> B*NL
         x = x.reshape(B, -1)
+
         # embedding B*NL ==> B*NL*D
         x = self.tokenEmb(x)
 
         # FFT B*NL*D ==> B*NT/2*D
-        x = torch.fft.rfft(x, dim=1, norm='ortho')
+        x = torch.fft.rfft(x, dim=1, norm=self.fft_norm)
 
         x = x.reshape(B, (N*L)//2 + 1, self.frequency_size)
 
@@ -158,7 +167,7 @@ class FGN(nn.Module):
         x = x.reshape(B, (N*L)//2+1, self.embed_size)
 
         # ifft
-        x = torch.fft.irfft(x, n=N*L, dim=1, norm="ortho")
+        x = torch.fft.irfft(x, n=N*L, dim=1, norm=self.fft_norm)
 
         x = x.reshape(B, N, L, self.embed_size)
         x = x.permute(0, 1, 3, 2)  # B, N, D, L
@@ -170,8 +179,5 @@ class FGN(nn.Module):
 
         if hasattr(self, 'target_idx'):
             return x[:, self.target_idx, :]
-        # if self.univariate_output_head is not None:
-        #     x = x.reshape(B, -1)
-        #     x = self.univariate_output_head(x)
 
         return x
