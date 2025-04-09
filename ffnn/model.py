@@ -54,5 +54,8 @@ class FFNN(nn.Module):
         Returns:
             torch.Tensor: Output tensor of shape (batch_size, output_size)
         """
+        # Ensure input is on the correct device
+        if not x.is_cuda and self.device.type == 'cuda':
+            x = x.to(self.device)
         x = x.reshape(x.shape[0], -1)
         return self.model(x)

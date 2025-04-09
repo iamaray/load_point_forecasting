@@ -49,7 +49,7 @@ class LSTMTrainer(ModelTrainer):
         num_batches = 0
 
         for x, y in train_loader:
-            x, y = x.to(self.device), y.to(self.device)
+            x, y = self._move_to_device((x, y))
 
             self.optimizer.zero_grad()
             out, _ = self.model(x)
@@ -87,7 +87,7 @@ class LSTMTrainer(ModelTrainer):
 
         with torch.no_grad():
             for x, y in val_loader:
-                x, y = x.to(self.device), y.to(self.device)
+                x, y = self._move_to_device((x, y))
                 out, _ = self.model(x)
                 loss = self.criterion(out, y)
                 val_loss += loss.item()
@@ -164,7 +164,7 @@ class LSTMTrainer(ModelTrainer):
         """
         self.model.eval()
         if train_norm is not None:
-            train_norm.to(self.device)
+            train_norm.set_device(self.device)
         else:
             def train_norm(x): return x
 
@@ -175,7 +175,7 @@ class LSTMTrainer(ModelTrainer):
 
         with torch.no_grad():
             for x, y in test_loader:
-                x, y = x.to(self.device), y.to(self.device)
+                x, y = self._move_to_device((x, y))
 
                 x_transformed = None
                 try:
@@ -193,7 +193,6 @@ class LSTMTrainer(ModelTrainer):
                     out_reversed = out
 
                 loss = self.criterion(out_reversed, y)
-
                 test_loss += loss.item()
                 num_batches += 1
 

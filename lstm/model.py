@@ -27,9 +27,8 @@ class LSTMWrapper(nn.LSTM):
             bidirectional (bool): If True, becomes a bidirectional LSTM
             batch_first (bool): If True, input and output tensors are (batch, seq, feature)
         """
-        self.device = device
-        if self.device is None:
-            self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = device if device is not None else torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
 
         super(LSTMWrapper, self).__init__(
             input_size=input_size,
@@ -37,14 +36,13 @@ class LSTMWrapper(nn.LSTM):
             num_layers=num_layers,
             dropout=dropout,
             bidirectional=bidirectional,
-            batch_first=batch_first,
-            device=device
+            batch_first=batch_first
         )
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = hidden_size * 2 if bidirectional else hidden_size
         self.forecast_head = nn.Linear(self.output_size, forecast_length)
-        
+
         self.to(self.device)
 
     def init_hidden(self, batch_size):
@@ -68,20 +66,29 @@ class LSTMWrapper(nn.LSTM):
 
     def forward(self, x, hidden=None):
         """
-        Forward pass of the LSTM wrapper.
-        x: (batch_size, seq_len, input_size)
-        hidden: (num_layers * num_directions, batch_size, hidden_size)
+        Forward pass of the LSTM model.
+
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, seq_len, input_size)
+            hidden (tuple, optional): Initial hidden state
+
+        Returns:
+            tuple: (output, hidden_state)
         """
-        x = x.to(self.device)
+        # Ensure input is on the correct device
+        if not x.is_cuda and self.device.type == 'cuda':
+            x = x.to(self.device)
 
+        # Move hidden state to device if provided
         if hidden is not None:
-            hidden = (hidden[0].to(self.device), hidden[1].to(self.device))
-        else:
-            hidden = self.init_hidden(x.size(0))
+            hidden = tuple(h.to(self.device) for h in hidden)
 
-        outputs, hidden = super(LSTMWrapper, self).forward(x, hidden)
+        # Get LSTM output for all time steps
+        output, hidden = super().forward(x, hidden)
 
-        last_output = outputs[:, -1, :]  # [batch_size, hidden_size]
+        # Only use the last time step's output for forecasting
+        last_output = output[:, -1, :]  # [batch_size, hidden_size]
+        # [batch_size, forecast_length]
         forecast = self.forecast_head(last_output)
 
         return forecast, hidden

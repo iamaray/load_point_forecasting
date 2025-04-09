@@ -48,6 +48,21 @@ def grid_search(
         scheduler_type: str = "sinusoidal",
         save_name: str = 'ffnn'):
 
+    # Determine device to use
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    # Move data loaders to device
+    def move_loader_to_device(loader):
+        for batch in loader:
+            if isinstance(batch, (tuple, list)):
+                return tuple(x.to(device) if torch.is_tensor(x) else x for x in batch)
+            elif torch.is_tensor(batch):
+                return batch.to(device)
+            return batch
+
+    # Move normalization to device
+    train_norm.set_device(device)
+
     param_combs = split_param_grid(param_grid)
 
     logger = logging.getLogger("GridSearch")
@@ -67,12 +82,13 @@ def grid_search(
     best_idx = 0
 
     logger.info(
-        f"Starting grid search with {len(param_combs)} parameter combinations")
+        f"Starting grid search with {len(param_combs)} parameter combinations on device: {device}")
 
     for i, params in enumerate(param_combs):
         logger.info(f"Combination {i+1}/{len(param_combs)}: {params}")
 
-        model = model_class(**params)
+        # Initialize model with device
+        model = model_class(**params, device=device)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -85,7 +101,12 @@ def grid_search(
                 optimizer, mode='min', factor=0.5, patience=5)
 
         trainer = trainer_class(
-            model=model, optimizer=optimizer, lr=lr, scheduler=scheduler, device=model.device)
+            model=model,
+            optimizer=optimizer,
+            lr=lr,
+            scheduler=scheduler,
+            device=device
+        )
 
         history = trainer.train(epochs=epochs, train_loader=train_loader,
                                 val_loader=val_loader, save_best=True)
@@ -102,8 +123,8 @@ def grid_search(
             logger=logger)
 
         metrics = calculate_all_metrics(
-            y_pred=test_results['predictions'].numpy(),
-            y_true=test_results['targets'].numpy()
+            y_pred=test_results['predictions'].cpu().numpy(),
+            y_true=test_results['targets'].cpu().numpy()
         )
 
         result = {

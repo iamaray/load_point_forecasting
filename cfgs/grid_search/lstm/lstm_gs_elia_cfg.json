@@ -8,9 +8,8 @@
   "save_name": "lstm_elia",
   "param_grid": {
     "input_size": [9],
-    "num_layers": [2, 3, 4, 5],
+    "num_layers": [2, 3],
     "hidden_size": [128, 256],
-    "output_size": [96],
-    "dropout": [0.2]
+    "dropout": [0.1]
   }
 }

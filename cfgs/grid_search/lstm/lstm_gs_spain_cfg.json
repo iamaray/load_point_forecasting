@@ -3,13 +3,15 @@
   "job_type": "grid_search",
   "data_path": "data/datasets/spain_data",
   "lr": 0.001,
-  "epochs": 50,
+  "epochs": 10,
   "scheduler": "sinusoidal",
   "save_name": "lstm_spain",
   "param_grid": {
-    "pre_length": [24],
+    "input_size": [28],
     "hidden_size": [128, 256],
-    "num_layers": [1, 2, 3, 4, 5],
-    "dropout": [0.0, 0.2]
+    "num_layers": [2, 3],
+    "dropout": [0.1],
+    "forecast_length": [24],
+    "bidirectional": [false]
   }
 }

@@ -23,12 +23,24 @@ class ModelTrainer(nn.Module):
             device: Device to run training on (defaults to GPU if available)
         """
         super(ModelTrainer, self).__init__()
-        self.optimizer = optimizer
-        self.criterion = criterion if criterion is not None else nn.MSELoss()
-        self.scheduler = scheduler
         self.device = device if device is not None else torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
+
+        # Ensure model is on the correct device
         self.model = model.to(self.device)
+
+        # Move optimizer parameters to the correct device
+        for param in optimizer.param_groups:
+            for p in param['params']:
+                p.data = p.data.to(self.device)
+        self.optimizer = optimizer
+
+        # Move criterion to device if it has parameters
+        self.criterion = criterion if criterion is not None else nn.MSELoss()
+        if hasattr(self.criterion, 'parameters'):
+            self.criterion = self.criterion.to(self.device)
+
+        self.scheduler = scheduler
         self.best_model_state = None
         self.best_loss = float('inf')
         self.history = {'train_loss': [], 'val_loss': [], 'test_loss': None}
@@ -41,6 +53,16 @@ class ModelTrainer(nn.Module):
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
+
+    def _move_to_device(self, data):
+        """Helper method to move data to the correct device"""
+        if isinstance(data, (tuple, list)):
+            return tuple(x.to(self.device) if torch.is_tensor(x) else x for x in data)
+        elif torch.is_tensor(data):
+            return data.to(self.device)
+        elif isinstance(data, DataTransform):
+            return data.set_device(self.device)
+        return data
 
     def _train_epoch(self, train_loader: DataLoader) -> float:
         """

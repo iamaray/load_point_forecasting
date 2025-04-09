@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -Jffnn_elia                              # Job name
+#SBATCH -Jfgnn_spain                           # Job name
 #SBATCH --account=gts-sd111                      # charge account
 #SBATCH -N1                                      # Number of nodes and cores per node required
 #SBATCH --mem-per-cpu=12G                        # Memory per core
@@ -17,4 +17,4 @@ module load anaconda3
 conda activate epf
 
 # Run Code
-srun python main.py --config="cfgs/grid_search/ffnn/ffnn_gs_elia_cfg.json"
+srun python main.py --config="cfgs/grid_search/fgnn/fgnn_gs_spain_cfg.json" 

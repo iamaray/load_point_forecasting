@@ -142,6 +142,14 @@ class FGN(nn.Module):
         return z
 
     def forward(self, x):
+        
+        # Check for NaN values in the input tensor
+        if torch.isnan(x).any():
+            nan_count = torch.isnan(x).sum().item()
+            total_elements = x.numel()
+            nan_proportion = nan_count / total_elements
+            print(f"Warning: NaN values detected in input tensor. Proportion: {nan_proportion:.4f} ({nan_count}/{total_elements})")
+        
         # B*N*L ==> B*N*L
         x = x.permute(0, 2, 1).contiguous()
         B, N, L = x.shape

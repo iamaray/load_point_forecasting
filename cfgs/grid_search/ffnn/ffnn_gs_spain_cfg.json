@@ -7,9 +7,9 @@
   "scheduler": "sinusoidal",
   "save_name": "ffnn_spain",
   "param_grid": {
-    "input_size": [9408],
-    "num_hidden": [2, 3, 4, 5],
-    "hidden_size": [128, 256],
+    "input_size": [8736],
+    "num_hidden": [2],
+    "hidden_size": [128],
     "output_size": [24],
     "dropout": [0.2]
   }

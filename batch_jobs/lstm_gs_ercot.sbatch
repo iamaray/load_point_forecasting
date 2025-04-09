@@ -8,7 +8,7 @@
 #SBATCH -oReport-%j.out                          # Combined output and error messages file
 #SBATCH --mail-type=BEGIN,END,FAIL               # Mail preferences
 #SBATCH --mail-user=anahri3@gatech.edu           # E-mail address for notifications
-#SBATCH --gres=gpu:H100:1
+#SBATCH --gres=gpu:V100:1
 
 cd $HOME/load_point_forecasting               # Change to working directory created in $HOME
 

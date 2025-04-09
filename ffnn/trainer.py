@@ -44,7 +44,7 @@ class FFNNTrainer(ModelTrainer):
         num_batches = 0
 
         for x, y in train_loader:
-            x, y = x.to(self.device), y.to(self.device)
+            x, y = self._move_to_device((x, y))
 
             self.optimizer.zero_grad()
 
@@ -66,7 +66,6 @@ class FFNNTrainer(ModelTrainer):
         return avg_loss
 
     def _eval_epoch(self, val_loader: DataLoader, epoch) -> float:
-
         if val_loader is None:
             return None
 
@@ -75,12 +74,12 @@ class FFNNTrainer(ModelTrainer):
 
         with torch.no_grad():
             for x, y in val_loader:
-                x, y = x.to(self.device), y.to(self.device)
+                x, y = self._move_to_device((x, y))
 
                 out = self.model(x)
                 loss = self.criterion(out, y)
 
-                val_loss += loss
+                val_loss += loss.item()
                 num_batches += 1
 
         avg_loss = val_loss / num_batches
@@ -137,13 +136,14 @@ class FFNNTrainer(ModelTrainer):
 
         Args:
             test_loader: DataLoader for test data
+            train_norm: Optional data transformation
 
         Returns:
             Dict containing test metrics including loss and predictions
         """
         self.model.eval()
         if train_norm is not None:
-            train_norm.to(self.device)
+            train_norm.set_device(self.device)
         else:
             def train_norm(x): return x
 
@@ -154,7 +154,7 @@ class FFNNTrainer(ModelTrainer):
 
         with torch.no_grad():
             for x, y in test_loader:
-                x, y = x.to(self.device), y.to(self.device)
+                x, y = self._move_to_device((x, y))
 
                 x_transformed = None
                 try:
@@ -166,6 +166,7 @@ class FFNNTrainer(ModelTrainer):
 
                 out_reversed = None
                 try:
+                    print('HERE')
                     out_reversed = train_norm.reverse(
                         transformed=out.unsqueeze(-1)).squeeze()
                 except:

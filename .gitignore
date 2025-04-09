@@ -55,6 +55,7 @@ logs/
 # Data
 data/
 datasets/
+results/
 *.csv
 *.h5
 *.png
