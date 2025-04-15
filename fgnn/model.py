@@ -215,6 +215,6 @@ def FGN_prep_cfg(
 
     cfg['param_grid']['pre_length'] = [y_shape[-1]]
     cfg['param_grid']['seq_length'] = [x_shape[-2]]
-    cfg['param_grid']['input_size'] = [x_shape[-1]]
+    cfg['param_grid']['feature_size'] = [x_shape[-1]]
 
     return cfg
