@@ -9,6 +9,7 @@
   "param_grid": {
     "num_layers": [2, 3, 4, 5],
     "hidden_size": [128, 256, 512],
-    "dropout": [0.1]
+    "dropout": [0.1],
+    "bidirectional": [false]
   }
 }

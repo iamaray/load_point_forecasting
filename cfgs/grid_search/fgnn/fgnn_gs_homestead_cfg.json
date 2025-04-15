@@ -7,7 +7,7 @@
   "scheduler": "sinusoidal",
   "save_name": "fgnn_homestead",
   "param_grid": {
-    "embed_size": [32, 64],
+    "embed_size": [32, 64, 128],
     "hidden_size": [128],
     "hidden_size_factor": [1],
     "sparsity_threshold": [0.01, 0.05],

@@ -118,8 +118,11 @@ def r2_score(y_true: Union[np.ndarray, torch.Tensor], y_pred: Union[np.ndarray, 
     return 1 - ss_res / (ss_tot + 1e-10)
 
 
-def calculate_all_metrics(y_true: Union[np.ndarray, torch.Tensor],
-                          y_pred: Union[np.ndarray, torch.Tensor]) -> Dict[str, float]:
+def calculate_all_metrics(
+    y_pred_unnorm: Union[np.ndarray, torch.Tensor],
+    y_true_unnorm: Union[np.ndarray, torch.Tensor],
+    y_true:        Union[np.ndarray, torch.Tensor],
+    y_pred:        Union[np.ndarray, torch.Tensor]) -> Dict[str, float]:
     """
     Calculate all metrics at once.
 
@@ -134,6 +137,6 @@ def calculate_all_metrics(y_true: Union[np.ndarray, torch.Tensor],
         'mse': mse(y_true, y_pred),
         'rmse': rmse(y_true, y_pred),
         'mae': mae(y_true, y_pred),
-        'mape': mape(y_true, y_pred),
-        'smape': smape(y_true, y_pred)
+        'mape': mape(y_true_unnorm, y_pred_unnorm),
+        'smape': smape(y_true_unnorm, y_pred_unnorm)
     }

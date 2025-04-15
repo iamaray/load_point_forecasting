@@ -120,6 +120,8 @@ def grid_search(
             logger=logger)
 
         metrics = calculate_all_metrics(
+            y_pred_unnorm=test_results['original_predictions'],
+            y_true_unnorm=test_results['original_targets'],
             y_pred=test_results['predictions'].cpu().numpy(),
             y_true=test_results['targets'].cpu().numpy()
         )
