@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import copy
 
 class LSTMWrapper(nn.LSTM):
     """
@@ -75,20 +75,29 @@ class LSTMWrapper(nn.LSTM):
         Returns:
             tuple: (output, hidden_state)
         """
-        # Ensure input is on the correct device
         if not x.is_cuda and self.device.type == 'cuda':
             x = x.to(self.device)
 
-        # Move hidden state to device if provided
         if hidden is not None:
             hidden = tuple(h.to(self.device) for h in hidden)
 
-        # Get LSTM output for all time steps
         output, hidden = super().forward(x, hidden)
 
-        # Only use the last time step's output for forecasting
         last_output = output[:, -1, :]  # [batch_size, hidden_size]
         # [batch_size, forecast_length]
         forecast = self.forecast_head(last_output)
 
         return forecast, hidden
+
+def prep_cfg(
+    param_dict: dict, 
+    x : torch.Tensor, 
+    granularity: int = 1,
+    pred_hours: int = 24):
+    
+    assert (len(x.shape) == 3)
+    
+    cfg = copy.deepcopy(param_dict)
+    cfg['input_size'] = x.shape[-1]
+    
+    return cfg

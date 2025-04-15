@@ -149,6 +149,10 @@ class FFNNTrainer(ModelTrainer):
 
         test_loss = 0.0
         num_batches = 0
+
+        all_std_predictions = []
+        all_std_targets = []
+
         all_predictions = []
         all_targets = []
 
@@ -156,7 +160,6 @@ class FFNNTrainer(ModelTrainer):
             for x, y in test_loader:
                 x, y = self._move_to_device((x, y))
 
-                x_transformed = None
                 try:
                     x_transformed = train_norm.transform(x)
                 except:
@@ -164,17 +167,24 @@ class FFNNTrainer(ModelTrainer):
 
                 out = self.model(x_transformed)
 
-                out_reversed = None
                 try:
-                    print('HERE')
+                    label_transformed = train_norm.transform(
+                        y.unsqueeze(-1), transform_col=0).squeeze()
+                except:
+                    label_transformed = y
+
+                loss = self.criterion(out, label_transformed)
+                test_loss += loss.item()
+                num_batches += 1
+
+                all_std_predictions.append(out.cpu())
+                all_std_targets.append(label_transformed.cpu())
+
+                try:
                     out_reversed = train_norm.reverse(
                         transformed=out.unsqueeze(-1)).squeeze()
                 except:
                     out_reversed = out
-
-                loss = self.criterion(out_reversed, y)
-                test_loss += loss.item()
-                num_batches += 1
 
                 all_predictions.append(out_reversed.cpu())
                 all_targets.append(y.cpu())
@@ -184,11 +194,15 @@ class FFNNTrainer(ModelTrainer):
 
         predictions = torch.cat(all_predictions, dim=0)
         targets = torch.cat(all_targets, dim=0)
+        std_predictions = torch.cat(all_std_predictions, dim=0)
+        std_targets = torch.cat(all_std_targets, dim=0)
 
         self.logger.info(f"Test Loss: {avg_loss:.6f}")
 
         return {
             'test_loss': avg_loss,
-            'predictions': predictions,
-            'targets': targets
+            'predictions': std_predictions,
+            'targets': std_targets,
+            'original_predictions': predictions,
+            'original_targets': targets
         }

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import copy
 
 class FFNN(nn.Module):
     """
@@ -54,8 +54,23 @@ class FFNN(nn.Module):
         Returns:
             torch.Tensor: Output tensor of shape (batch_size, output_size)
         """
-        # Ensure input is on the correct device
         if not x.is_cuda and self.device.type == 'cuda':
             x = x.to(self.device)
         x = x.reshape(x.shape[0], -1)
         return self.model(x)
+    
+
+def prep_cfg(
+    param_dict: dict, 
+    x: torch.Tensor, 
+    granularity: int = 1, 
+    pred_hours: int = 24):
+    
+    assert (len(x.shape) == 3)
+    
+    cfg = copy.deepcopy(param_dict)
+    
+    cfg['output_size'] = pred_hours * granularity
+    cfg['input_size'] = x.shape[-1] * x.shape[-2] * granularity
+    
+    return cfg

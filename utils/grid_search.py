@@ -116,8 +116,8 @@ def grid_search(
 
         plot_test_samples(
             n_samples=10,
-            predicted_samples=test_results['predictions'],
-            target_samples=test_results['targets'],
+            predicted_samples=test_results['original_predictions'],
+            target_samples=test_results['original_targets'],
             i=i,
             save_name=save_name,
             logger=logger)

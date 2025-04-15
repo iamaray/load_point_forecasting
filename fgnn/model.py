@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import copy
 
 class FGN(nn.Module):
     def __init__(
@@ -200,3 +200,19 @@ class FGN(nn.Module):
             return x[:, self.target_idx, :]
 
         return x
+    
+def prep_cfg(
+    param_dict: dict, 
+    x: torch.Tensor, 
+    granularity: int = 1, 
+    pred_hrs: int = 24):
+    
+    assert (len(x.shape) == 3)
+    
+    cfg = copy.deepcopy(param_dict)
+    
+    cfg['pre_length'] = pred_hrs * granularity
+    cfg['seq_length'] = x.shape[-2] * granularity
+    cfg['input_size'] = x.shape[-1]
+    
+    return cfg
