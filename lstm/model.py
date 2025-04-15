@@ -89,7 +89,7 @@ class LSTMWrapper(nn.LSTM):
 
         return forecast, hidden
 
-def prep_cfg(
+def LSTM_prep_cfg(
     param_dict: dict, 
     x : torch.Tensor, 
     granularity: int = 1,
@@ -99,5 +99,6 @@ def prep_cfg(
     
     cfg = copy.deepcopy(param_dict)
     cfg['input_size'] = x.shape[-1]
+    cfg['forecast_length'] = pred_hours * granularity
     
     return cfg

@@ -7,9 +7,8 @@
   "scheduler": "sinusoidal",
   "save_name": "lstm_elia",
   "param_grid": {
-    "input_size": [9],
-    "num_layers": [2, 3],
-    "hidden_size": [128, 256],
+    "num_layers": [2, 3, 4, 5],
+    "hidden_size": [128, 256, 512],
     "dropout": [0.1]
   }
 }

@@ -3,13 +3,13 @@ import torch.nn as nn
 import json
 import argparse
 
-from lstm.model import LSTMWrapper
+from lstm.model import LSTMWrapper, LSTM_prep_cfg
 from lstm.trainer import LSTMTrainer
 
-from ffnn.model import FFNN
+from ffnn.model import FFNN, FFNN_prep_cfg
 from ffnn.trainer import FFNNTrainer
 
-from fgnn.model import FGN
+from fgnn.model import FGN, FGN_prep_cfg
 from fgnn.trainer import FGNNTrainer
 
 from dataclasses import dataclass
@@ -23,7 +23,7 @@ from utils.grid_search import grid_search
 #     x: torch.Tensor
 #     y: torch.Tensor = None
 
-models = {'ffnn': FFNN, 'lstm': LSTMWrapper, 'fgnn': FGN}
+models = {'ffnn': (FFNN, FFNN_prep_cfg), 'lstm': (LSTMWrapper, LSTM_prep_cfg), 'fgnn': (FGN, FGN_prep_cfg)}
 trainers = {'ffnn': FFNNTrainer, 'lstm': LSTMTrainer, 'fgnn': FGNNTrainer}
 
 
@@ -41,7 +41,9 @@ def main(cfg_path):
         print(f"Error reading configuration file: {str(e)}")
         return
 
-    model_class = models[config['model_name']]
+    model_class = models[config['model_name']][0]
+    config = models[config['model_name']][1](config)
+    
     trainer_class = trainers[config['model_name']]
     job_type = config['job_type']
     data_path = config['data_path']

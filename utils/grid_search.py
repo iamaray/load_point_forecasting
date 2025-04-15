@@ -48,10 +48,8 @@ def grid_search(
         scheduler_type: str = "sinusoidal",
         save_name: str = 'ffnn'):
 
-    # Determine device to use
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # Move data loaders to device
     def move_loader_to_device(loader):
         for batch in loader:
             if isinstance(batch, (tuple, list)):
@@ -60,7 +58,6 @@ def grid_search(
                 return batch.to(device)
             return batch
 
-    # Move normalization to device
     train_norm.set_device(device)
 
     param_combs = split_param_grid(param_grid)

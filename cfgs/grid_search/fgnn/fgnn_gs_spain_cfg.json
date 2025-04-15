@@ -7,10 +7,7 @@
   "scheduler": "sinusoidal",
   "save_name": "fgnn_spain",
   "param_grid": {
-    "pre_length": [24],
     "embed_size": [32, 64, 128],
-    "feature_size": [28],
-    "seq_length": [336],
     "hidden_size": [128],
     "hidden_size_factor": [1],
     "sparsity_threshold": [0.01, 0.05],

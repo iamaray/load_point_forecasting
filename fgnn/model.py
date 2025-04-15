@@ -201,7 +201,7 @@ class FGN(nn.Module):
 
         return x
     
-def prep_cfg(
+def FGNN_prep_cfg(
     param_dict: dict, 
     x: torch.Tensor, 
     granularity: int = 1, 

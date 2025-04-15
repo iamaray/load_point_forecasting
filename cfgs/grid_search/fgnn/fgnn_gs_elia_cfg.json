@@ -7,10 +7,7 @@
   "scheduler": "sinusoidal",
   "save_name": "fgnn_elia",
   "param_grid": {
-    "pre_length": [96],
     "embed_size": [32, 64],
-    "feature_size": [9],
-    "seq_length": [1344],
     "hidden_size": [128],
     "hidden_size_factor": [1],
     "sparsity_threshold": [0.01, 0.05],
