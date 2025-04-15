@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import copy
 
+
 class LSTMWrapper(nn.LSTM):
     """
     A simple wrapper around PyTorch's LSTM module.
@@ -89,16 +90,16 @@ class LSTMWrapper(nn.LSTM):
 
         return forecast, hidden
 
+
 def LSTM_prep_cfg(
-    param_dict: dict, 
-    x : torch.Tensor, 
-    granularity: int = 1,
-    pred_hours: int = 24):
-    
-    assert (len(x.shape) == 3)
-    
+        param_dict: dict,
+        x_shape: list,
+        y_shape: list = [64, 24]):
+
+    assert (len(x_shape) == 3)
+
     cfg = copy.deepcopy(param_dict)
-    cfg['input_size'] = x.shape[-1]
-    cfg['forecast_length'] = pred_hours * granularity
-    
+    cfg['param_grid']['input_size'] = [x_shape[-1]]
+    cfg['param_grid']['forecast_length'] = [y_shape[-1]]
+
     return cfg

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import copy
 
+
 class FFNN(nn.Module):
     """
     A simple feed-forward neural network (FFNN) for time series forecasting.
@@ -58,19 +59,18 @@ class FFNN(nn.Module):
             x = x.to(self.device)
         x = x.reshape(x.shape[0], -1)
         return self.model(x)
-    
+
 
 def FFNN_prep_cfg(
-    param_dict: dict, 
-    x: torch.Tensor, 
-    granularity: int = 1, 
-    pred_hours: int = 24):
-    
-    assert (len(x.shape) == 3)
-    
+        param_dict: dict,
+        x_shape: list,
+        y_shape: list = [64, 24]):
+
+    assert (len(x_shape) == 3)
+
     cfg = copy.deepcopy(param_dict)
-    
-    cfg['output_size'] = pred_hours * granularity
-    cfg['input_size'] = x.shape[-1] * x.shape[-2] * granularity
-    
+
+    cfg['param_grid']['output_size'] = [y_shape[-1]]
+    cfg['param_grid']['input_size'] = [x_shape[-2] * x_shape[-1]]
+
     return cfg

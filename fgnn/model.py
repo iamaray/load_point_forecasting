@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import copy
 
+
 class FGN(nn.Module):
     def __init__(
             self,
@@ -142,14 +143,15 @@ class FGN(nn.Module):
         return z
 
     def forward(self, x):
-        
+
         # Check for NaN values in the input tensor
         if torch.isnan(x).any():
             nan_count = torch.isnan(x).sum().item()
             total_elements = x.numel()
             nan_proportion = nan_count / total_elements
-            print(f"Warning: NaN values detected in input tensor. Proportion: {nan_proportion:.4f} ({nan_count}/{total_elements})")
-        
+            print(
+                f"Warning: NaN values detected in input tensor. Proportion: {nan_proportion:.4f} ({nan_count}/{total_elements})")
+
         # B*N*L ==> B*N*L
         x = x.permute(0, 2, 1).contiguous()
         B, N, L = x.shape
@@ -200,19 +202,19 @@ class FGN(nn.Module):
             return x[:, self.target_idx, :]
 
         return x
-    
-def FGNN_prep_cfg(
-    param_dict: dict, 
-    x: torch.Tensor, 
-    granularity: int = 1, 
-    pred_hrs: int = 24):
-    
-    assert (len(x.shape) == 3)
-    
+
+
+def FGN_prep_cfg(
+        param_dict: dict,
+        x_shape: list,
+        y_shape: list = [64, 24]):
+
+    assert (len(x_shape) == 3)
+
     cfg = copy.deepcopy(param_dict)
-    
-    cfg['pre_length'] = pred_hrs * granularity
-    cfg['seq_length'] = x.shape[-2] * granularity
-    cfg['input_size'] = x.shape[-1]
-    
+
+    cfg['param_grid']['pre_length'] = [y_shape[-1]]
+    cfg['param_grid']['seq_length'] = [x_shape[-2]]
+    cfg['param_grid']['input_size'] = [x_shape[-1]]
+
     return cfg

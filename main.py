@@ -23,8 +23,15 @@ from utils.grid_search import grid_search
 #     x: torch.Tensor
 #     y: torch.Tensor = None
 
-models = {'ffnn': (FFNN, FFNN_prep_cfg), 'lstm': (LSTMWrapper, LSTM_prep_cfg), 'fgnn': (FGN, FGN_prep_cfg)}
-trainers = {'ffnn': FFNNTrainer, 'lstm': LSTMTrainer, 'fgnn': FGNNTrainer}
+models = {
+    'ffnn': (FFNN, FFNN_prep_cfg), 
+    'lstm': (LSTMWrapper, LSTM_prep_cfg), 
+    'fgnn': (FGN, FGN_prep_cfg)}
+
+trainers = {
+    'ffnn': FFNNTrainer, 
+    'lstm': LSTMTrainer, 
+    'fgnn': FGNNTrainer}
 
 
 def main(cfg_path):
@@ -42,16 +49,23 @@ def main(cfg_path):
         return
 
     model_class = models[config['model_name']][0]
-    config = models[config['model_name']][1](config)
-    
+
     trainer_class = trainers[config['model_name']]
     job_type = config['job_type']
     data_path = config['data_path']
 
     train_loader = torch.load(f'{data_path}/train_loader_non_spatial.pt')
-    val_loader = torch.load(f'{data_path}/val_loader_non_spatial.pt')
-    test_loader = torch.load(f'{data_path}/test_loader_non_spatial.pt')
-    transform = torch.load(f'{data_path}/transform_non_spatial.pt')
+    val_loader = torch.load(f'{data_path}/val_loader_non_spatial.pt')    
+    test_loader = torch.load(f'{data_path}/test_loader_non_spatial.pt')  
+    transform = torch.load(f'{data_path}/transform_non_spatial.pt')      
+
+    x_shape = next(iter(train_loader))[0].shape
+    y_shape = next(iter(train_loader))[1].shape
+    
+    config = models[config['model_name']][1](
+        param_dict=config,
+        x_shape=x_shape,
+        y_shape=y_shape)
 
     if job_type == 'grid_search':
         res = grid_search(
