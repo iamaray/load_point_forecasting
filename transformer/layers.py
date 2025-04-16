@@ -63,7 +63,9 @@ class MultiHeadAttention(nn.Module):
             batch_size, tgt_seq_len, _ = x.size()
             mask = torch.triu(torch.full((tgt_seq_len, tgt_seq_len), float('-inf')), diagonal=1)
             
-        return self.atten(x, x, x, attn_mask=mask)
+            return self.atten(x, x, x, attn_mask=mask)
+
+        return self.atten(x, x, x)
 
 class CrossAttention(nn.Module):
     def __init__(self, d_model, num_heads):
@@ -80,9 +82,9 @@ class CrossAttention(nn.Module):
 
 class EncoderLayer(nn.Module):
     def __init__(self, d_model, num_heads, dff):
-        super(EncoderSubLayer, self).__init__()
+        super(EncoderLayer, self).__init__()
         
-        self.mha = MultiHeadAttention(d_model=d_model, num_heads=num_heads)
+        self.mha = MultiHeadAttention(d_model=d_model, num_heads=num_heads, masked=False)
         
         self.layer_norm1 = nn.LayerNorm(d_model)
         self.layer_norm1 = nn.LayerNorm(d_model)
@@ -109,9 +111,30 @@ class EncoderLayer(nn.Module):
     
 class DecoderLayer(nn.Module):
     def __init__(self, d_model, num_heads, dff):
-        super(DecoderSublayer, self).__init__()
+        super(DecoderLayer, self).__init__()
         
-        # self.
+        self.mha = MultiHeadAttention(d_model=d_model, num_heads=num_heads, masked=True)
+        self.cross_att = CrossAttention(d_model=d_model, num_heads=num_heads)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, dff),
+            nn.ReLU(),
+            nn.Linear(dff, d_model)
+        )
+        
+        self.layer_norm1 = nn.LayerNorm(d_model)
+        self.layer_norm2 = nn.LayerNorm(d_model)
+        self.layer_norm3 = nn.LayerNorm(d_model)
         
     def forward(x_enc, y):
-        pass
+        self_attn_out, _ = self.mha(y)
+        
+        y = self.layer_norm1(y + self_attn_out)
+        
+        cross_attn_out, _ = self.cross_att(x_enc, y)
+        
+        y = self.layer_norm2(y + cross_attn_out)
+        
+        ffn_out = self.ffn(y)
+        y = self.layer_norm3(y + fnn_out)
+        
+        return y
