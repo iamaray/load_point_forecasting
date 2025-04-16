@@ -12,6 +12,9 @@ from ffnn.trainer import FFNNTrainer
 from fgnn.model import FGN, FGN_prep_cfg
 from fgnn.trainer import FGNNTrainer
 
+from transformer.model import Transformer, Transformer_prep_cfg
+from transformer.trainer import TransformerTrainer
+
 from dataclasses import dataclass
 from processing.transforms import StandardScaleNorm, MinMaxNorm, TransformSequence
 
@@ -24,14 +27,18 @@ from utils.grid_search import grid_search
 #     y: torch.Tensor = None
 
 models = {
-    'ffnn': (FFNN, FFNN_prep_cfg), 
-    'lstm': (LSTMWrapper, LSTM_prep_cfg), 
-    'fgnn': (FGN, FGN_prep_cfg)}
+    'ffnn': (FFNN, FFNN_prep_cfg),
+    'lstm': (LSTMWrapper, LSTM_prep_cfg),
+    'fgnn': (FGN, FGN_prep_cfg),
+    'transformer': (Transformer, Transformer_prep_cfg)
+}
 
 trainers = {
-    'ffnn': FFNNTrainer, 
-    'lstm': LSTMTrainer, 
-    'fgnn': FGNNTrainer}
+    'ffnn': FFNNTrainer,
+    'lstm': LSTMTrainer,
+    'fgnn': FGNNTrainer,
+    'transformer': TransformerTrainer
+}
 
 
 def main(cfg_path):
@@ -55,13 +62,13 @@ def main(cfg_path):
     data_path = config['data_path']
 
     train_loader = torch.load(f'{data_path}/train_loader_non_spatial.pt')
-    val_loader = torch.load(f'{data_path}/val_loader_non_spatial.pt')    
-    test_loader = torch.load(f'{data_path}/test_loader_non_spatial.pt')  
-    transform = torch.load(f'{data_path}/transform_non_spatial.pt')      
+    val_loader = torch.load(f'{data_path}/val_loader_non_spatial.pt')
+    test_loader = torch.load(f'{data_path}/test_loader_non_spatial.pt')
+    transform = torch.load(f'{data_path}/transform_non_spatial.pt')
 
     x_shape = next(iter(train_loader))[0].shape
     y_shape = next(iter(train_loader))[1].shape
-    
+
     config = models[config['model_name']][1](
         param_dict=config,
         x_shape=x_shape,

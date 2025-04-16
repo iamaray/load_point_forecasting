@@ -1,11 +1,11 @@
 {
   "model_name": "transformer",
   "job_type": "grid_search",
-  "data_path": "data/datasets/ercot_data",
+  "data_path": "data/datasets/spain_data",
   "lr": 0.001,
   "epochs": 50,
   "scheduler": "sinusoidal",
-  "save_name": "transformer_ercot",
+  "save_name": "transformer_spain",
   "teacher_forcing_ratio": 0.5,
   "param_grid": {
     "d_model": [128, 256],
@@ -15,4 +15,4 @@
     "dim_feedforward": [512, 1024],
     "dropout": [0.1, 0.2]
   }
-}
+} 
