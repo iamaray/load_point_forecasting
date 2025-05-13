@@ -2,17 +2,18 @@
   "model_name": "transformer",
   "job_type": "grid_search",
   "data_path": "data/datasets/us_homestead_data",
-  "lr": 0.001,
-  "epochs": 50,
+  "lr": 0.0007,
+  "epochs": 70,
   "scheduler": "sinusoidal",
-  "save_name": "transformer_homestead",
+  "save_name": "transformer_ercot",
   "teacher_forcing_ratio": 0.5,
   "param_grid": {
-    "d_model": [128, 256],
-    "nhead": [4, 8],
+    "d_model": [64, 128, 256],
+    "nhead": [4, 8, 16],
     "num_encoder_layers": [2, 3],
     "num_decoder_layers": [2, 3],
     "dim_feedforward": [512, 1024],
+    "pre_norm": [false, true],
     "dropout": [0.1, 0.2]
   }
-} 
+}

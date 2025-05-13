@@ -11,7 +11,14 @@ from .model import FFNN
 
 
 class FFNNTrainer(ModelTrainer):
-    def __init__(self, model, criterion=nn.MSELoss(), optimizer=None, lr=0.001, scheduler=None, device='cpu'):
+    def __init__(
+        self, 
+        model, 
+        criterion=nn.MSELoss(), 
+        optimizer=None, 
+        lr=0.001, 
+        scheduler=None, 
+        device='cpu'):
         """
         Trainer class for Feed-Forward Neural Network model.
 
@@ -78,7 +85,7 @@ class FFNNTrainer(ModelTrainer):
 
                 out = self.model(x)
                 loss = self.criterion(out, y)
-
+                
                 val_loss += loss.item()
                 num_batches += 1
 

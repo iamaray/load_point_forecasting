@@ -22,26 +22,9 @@ class Transformer(nn.Module):
         pred_len=24,
         positional_encoding=True,
         positional_feat=None,
+        pre_norm=False,
         device=None
     ):
-        """
-        Simplified transformer model for time series forecasting.
-        Designed to predict one time-step at a time.
-
-        Args:
-            input_dim: Dimension of input features
-            d_model: Dimension of the model
-            nhead: Number of heads in multi-head attention
-            num_encoder_layers: Number of encoder layers
-            num_decoder_layers: Number of decoder layers
-            dim_feedforward: Dimension of feedforward network
-            dropout: Dropout rate
-            max_seq_len: Maximum input sequence length
-            pred_len: Length of prediction horizon
-            positional_encoding: Whether to use positional encoding
-            positional_feat: Which feature to use for positional encoding (if None, use standard position)
-            device: Device to use for model computations
-        """
         super(Transformer, self).__init__()
 
         self.device = device if device is not None else torch.device(
@@ -52,27 +35,65 @@ class Transformer(nn.Module):
         self.max_seq_len = max_seq_len
         self.pred_len = pred_len
         self.use_pos_enc = positional_encoding
+        self.pos_enc = None
+        self.pre_norm = pre_norm
 
         self.input_embedding = TimeStepEmbedder(
-            in_feats=input_dim, d_model=d_model)
+            in_feats=input_dim,
+            d_model=d_model,
+            device=self.device)
+
+        self.label_embedding = TimeStepEmbedder(
+            in_feats=1,
+            d_model=d_model,
+            device=self.device
+        )
 
         if positional_encoding:
-            self.pos_encoder = PositionalEncoder(
+            self.pos_enc = PositionalEncoder(
                 positional_feat=positional_feat,
-                time_steps=max_seq_len + pred_len, 
-                d_model=d_model
-            )
+                time_steps=max_seq_len + pred_len,
+                d_model=d_model,
+                device=self.device
+            )(None)
 
         self.encoder_layers = nn.ModuleList([
-            EncoderLayer(d_model=d_model, num_heads=nhead, dff=dim_feedforward)
+            EncoderLayer(
+                d_model=d_model,
+                num_heads=nhead,
+                dff=dim_feedforward,
+                dropout=dropout,
+                pre_norm=pre_norm,
+                device=self.device)
+
             for _ in range(num_encoder_layers)
         ])
 
+        def get_causal_mask(seq_len):
+            return torch.triu(
+                torch.full((seq_len, seq_len), float(
+                    '-inf'), device=self.device),
+                diagonal=1)
+
+        self.get_causal_mask = get_causal_mask
+
         self.decoder_layers = nn.ModuleList([
-            DecoderLayer(d_model=d_model, num_heads=nhead, dff=dim_feedforward)
+            DecoderLayer(
+                d_model=d_model,
+                num_heads=nhead,
+                dff=dim_feedforward,
+                mask=None,
+                dropout=dropout,
+                pre_norm=pre_norm,
+                device=self.device)
+
             for _ in range(num_decoder_layers)
         ])
-        self.output_projection = nn.Linear(d_model, 1)
+        self.output_projection = nn.Linear(
+            in_features=d_model,
+            out_features=1,
+            device=self.device)
+
         self.dropout = nn.Dropout(dropout)
 
         self._init_parameters()
@@ -83,25 +104,12 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def encode(self, src):
-        """
-        Encode the source sequence.
-
-        Args:
-            src: Input sequence [batch_size, seq_len, input_dim]
-
-        Returns:
-            Encoded representation [batch_size, seq_len, d_model]
-        """
-        src = src.to(self.device)
-
-        x = self.input_embedding(src)
+    def encode(self, x):
+        x = x.to(self.device)
 
         if self.use_pos_enc:
             seq_len = x.size(1)
-            pos_enc = self.pos_encoder(None) 
-            pos_enc = pos_enc.to(self.device) 
-            x = x + pos_enc[:seq_len].unsqueeze(0)
+            x = x + self.pos_enc[:seq_len].unsqueeze(0)
 
         x = self.dropout(x)
 
@@ -111,66 +119,65 @@ class Transformer(nn.Module):
         return x
 
     def decode_step(self, memory, y_input, pos_idx=None):
-        """
-        Decode a single step.
-
-        Args:
-            memory: Encoded memory from encoder [batch_size, src_seq_len, d_model]
-            y_input: Input token for decoder [batch_size, 1, d_model]
-            pos_idx: Position index for positional encoding
-
-        Returns:
-            Output for the current step [batch_size, 1, d_model]
-        """
         memory = memory.to(self.device)
         y_input = y_input.to(self.device)
 
-        if self.use_pos_enc and pos_idx is not None:
-            pos_enc = self.pos_encoder(None)
-            pos_enc = pos_enc.to(self.device) 
-            y_input = y_input + pos_enc[pos_idx:pos_idx+1].unsqueeze(0)
+        if pos_idx is not None:
+            if self.use_pos_enc:
+                y_input = y_input + \
+                    self.pos_enc[pos_idx:pos_idx+1].unsqueeze(0)
+        else:
+            if self.use_pos_enc:
+                y_input = y_input + self.pos_enc[-self.pred_len:]
 
         y = self.dropout(y_input)
 
-        for decoder_layer in self.decoder_layers:
+        seq_len = y.size(1)
+        mask = self.get_causal_mask(seq_len)
+
+        for idx, decoder_layer in enumerate(self.decoder_layers):
+            decoder_layer.mha.mask = mask
             y = decoder_layer(memory, y)
 
         return y
 
-    def forward(self, x, y_input, pos_idx):
-        """
-        Forward pass that predicts one step ahead.
-
-        Args:
-            x: Input sequence [batch_size, seq_len, input_dim]
-            y_input: Input token for decoder [batch_size, 1, input_dim]
-
-        Returns:
-            Predicted next value [batch_size, 1]
-        """
+    def forward(self, x, y_input, pos_idx=None, teacher_forcing_ratio=0.5):
         x = x.to(self.device)
         y_input = y_input.to(self.device)
-        
+        batch_size = x.size(0)
+        tgt_seq_len = y_input.size(1)
+
+        x = self.input_embedding(x)
         memory = self.encode(x)
 
-        y_emb = self.input_embedding(y_input)
-        output = self.decode_step(memory, y_emb, pos_idx)
+        decoder_input = y_input[:, 0:1, :]
 
-        prediction = self.output_projection(output)
+        decoder_input = self.label_embedding(decoder_input)
 
-        return prediction
+        outputs = torch.zeros(batch_size, tgt_seq_len, 1, device=self.device)
+
+        for i in range(tgt_seq_len):
+            current_pos = x.size(1) + i if pos_idx is None else pos_idx
+
+            output = self.decode_step(memory, decoder_input, current_pos)
+
+            pred = self.output_projection(output)
+
+            outputs[:, i:i+1] = pred
+
+            if i < tgt_seq_len - 1:  # Not the last step
+                use_teacher_forcing = torch.rand(
+                    1).item() < teacher_forcing_ratio
+
+                if use_teacher_forcing and y_input is not None:
+                    next_input = y_input[:, i+1:i+2, :]
+                    decoder_input = self.label_embedding(next_input)
+                else:
+                    decoder_input = self.label_embedding(pred.detach())
+
+        return outputs
 
     def predict(self, x, target_len=None):
-        """
-        Generate autoregressive predictions for future time steps.
-
-        Args:
-            x: Input sequence [batch_size, seq_len, input_dim]
-            target_len: Number of steps to predict (default: self.pred_len)
-
-        Returns:
-            Predictions [batch_size, target_len]
-        """
         if target_len is None:
             target_len = self.pred_len
 
@@ -182,58 +189,36 @@ class Transformer(nn.Module):
             batch_size = x.size(0)
             device = self.device
 
-            memory = self.encode(x)
+            original_x = x.clone()
+
+            x = self.input_embedding(x)
+            memory = self.encode(x[:, :, :])
 
             predictions = torch.zeros(batch_size, target_len, device=device)
 
-            decoder_input = x[:, -1:, :]
+            decoder_input = original_x[:, -1:, 0:1].clone()
 
             for i in range(target_len):
                 pos_idx = x.size(1) + i
 
-                decoder_emb = self.input_embedding(decoder_input)
+                decoder_emb = self.label_embedding(decoder_input)
                 output = self.decode_step(memory, decoder_emb, pos_idx)
 
-                pred = self.output_projection(output).view(batch_size)
+                pred = self.output_projection(output)       # [B,1,1]
+                predictions[:, i] = pred.squeeze()          # [B]
 
-                predictions[:, i] = pred
-
-                decoder_input = torch.cat([
-                    # [batch, 1, 1]
-                    pred.unsqueeze(-1).unsqueeze(-1),
-                    torch.zeros(batch_size, 1, self.input_dim-1, device=device)
-                ], dim=-1)
+                decoder_input = pred.view(batch_size, 1, 1).detach().clone()
 
             return predictions
 
     def to(self, device):
-        """
-        Moves the model to the specified device and updates the device attribute.
-
-        Args:
-            device: Device to move the model to
-
-        Returns:
-            The model instance
-        """
         self.device = device
         return super(Transformer, self).to(device)
 
 
 def Transformer_prep_cfg(param_dict, x_shape, y_shape):
-    """
-    Prepare the configuration for a Transformer model.
-
-    Args:
-        param_dict: Dictionary containing model parameters
-        x_shape: Shape of input tensor [batch_size, seq_len, feature_dim]
-        y_shape: Shape of output tensor [batch_size, pred_len]
-
-    Returns:
-        Dictionary with prepared configuration
-    """
-    input_dim = x_shape[2]  
-    pred_len = y_shape[1]   
+    input_dim = x_shape[2]
+    pred_len = y_shape[1]
 
     config = param_dict.copy()
     config['param_grid']['input_dim'] = [input_dim]
@@ -245,5 +230,7 @@ def Transformer_prep_cfg(param_dict, x_shape, y_shape):
         config['param_grid']['positional_encoding'] = [True]
     if 'positional_feat' not in config:
         config['param_grid']['positional_feat'] = [None]
+    if 'pre_norm' not in config:
+        config['param_grid']['pre_norm'] = [False]
 
     return config

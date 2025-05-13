@@ -1,0 +1,13 @@
+{
+  "model_name": "lstm_atten_lstm",
+  "job_type": "grid_search",
+  "data_path": "data/datasets/france_data",
+  "lr": 0.001,
+  "epochs": 100,
+  "scheduler": "sinusoidal",
+  "save_name": "lstm_atten_lstm_france",
+  "param_grid": {
+    "num_enc_layers": [1, 2, 3],
+    "hidden_size": [64, 128, 256]
+  }
+} 

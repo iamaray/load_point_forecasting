@@ -15,6 +15,12 @@ from fgnn.trainer import FGNNTrainer
 from transformer.model import Transformer, Transformer_prep_cfg
 from transformer.trainer import TransformerTrainer
 
+from lstm_atten_lstm.model import LSTMAttenLSTM, LSTMAttenLSTM_prep_cfg
+from lstm_atten_lstm.trainer import LSTMAttenLSTMTrainer
+
+from encoder_transformer.model import EncoderTransformer, EncoderTransformer_prep_cfg
+from encoder_transformer.trainer import EncoderTransformerTrainer
+
 from dataclasses import dataclass
 from processing.transforms import StandardScaleNorm, MinMaxNorm, TransformSequence
 
@@ -30,14 +36,18 @@ models = {
     'ffnn': (FFNN, FFNN_prep_cfg),
     'lstm': (LSTMWrapper, LSTM_prep_cfg),
     'fgnn': (FGN, FGN_prep_cfg),
-    'transformer': (Transformer, Transformer_prep_cfg)
+    'transformer': (Transformer, Transformer_prep_cfg),
+    'lstm_atten_lstm': (LSTMAttenLSTM, LSTMAttenLSTM_prep_cfg),
+    'encoder_transformer': (EncoderTransformer, EncoderTransformer_prep_cfg)
 }
 
 trainers = {
     'ffnn': FFNNTrainer,
     'lstm': LSTMTrainer,
     'fgnn': FGNNTrainer,
-    'transformer': TransformerTrainer
+    'transformer': TransformerTrainer,
+    'lstm_atten_lstm': LSTMAttenLSTMTrainer,
+    'encoder_transformer': EncoderTransformerTrainer
 }
 
 

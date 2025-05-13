@@ -1,11 +1,7 @@
 import os
-import time
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 from torch.utils.data import DataLoader
 from typing import Dict, Any, Optional, List, Union
 import logging
@@ -14,7 +10,7 @@ from processing.transforms import DataTransform
 from utils.metrics import calculate_all_metrics
 
 
-class TransformerTrainer(ModelTrainer):
+class EncoderTransformerTrainer(ModelTrainer):
     def __init__(
         self,
         model,
@@ -24,38 +20,8 @@ class TransformerTrainer(ModelTrainer):
         scheduler=None,
         device=None,
         checkpoint_dir='checkpoints',
-        teacher_forcing_ratio=0.5,
     ):
-        """
-        Trainer for Transformer model with teacher forcing.
-
-        Args:
-            model: Transformer model that predicts one time-step at a time
-            criterion: Loss function (defaults to MSELoss)
-            optimizer: The optimizer to use for training (defaults to Adam)
-            lr: Learning rate (used if optimizer is None)
-            scheduler: Learning rate scheduler
-            device: Device to use for training
-            checkpoint_dir: Directory to save checkpoints
-            teacher_forcing_ratio: Probability of using teacher forcing (0-1)
-        """
-        self.device = device if device is not None else torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
-
-        model.to(self.device)
-
-        if optimizer is None:
-            optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-        super(TransformerTrainer, self).__init__(
-            model, optimizer, criterion, scheduler, device)
-
-        self.checkpoint_dir = checkpoint_dir
-        os.makedirs(checkpoint_dir, exist_ok=True)
-
-        self.teacher_forcing_ratio = teacher_forcing_ratio
-        self.lr = lr
-
+        # Setup logging first for better initialization messages
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
@@ -65,21 +31,44 @@ class TransformerTrainer(ModelTrainer):
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-        self.logger.info(f"Using device: {self.device}")
-        if torch.cuda.is_available():
-            self.logger.info(f"GPU: {torch.cuda.get_device_name(0)}")
+        # Determine device with better logging
+        self.device = device if device is not None else torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.logger.info(f"Initializing trainer with device: {self.device}")
+        if self.device.type == 'cuda':
+            self.logger.info(
+                f"CUDA device found: {torch.cuda.get_device_name(0)}")
+            self.logger.info(
+                f"CUDA memory available: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+        else:
+            self.logger.info("CUDA not available, using CPU")
+
+        # Set model's device attribute if it exists
+        if hasattr(model, 'device'):
+            model.device = self.device
+
+        # Move model to device
+        model.to(self.device)
+        self.logger.info(f"Model moved to {self.device}")
+
+        # Setup optimizer
+        if optimizer is None:
+            optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+            self.logger.info(f"Created Adam optimizer with lr={lr}")
+
+        # Call parent init
+        super(EncoderTransformerTrainer, self).__init__(
+            model, optimizer, criterion, scheduler, device=self.device)
+
+        # Setup checkpoint directory
+        self.checkpoint_dir = checkpoint_dir
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        self.logger.info(f"Using checkpoint directory: {checkpoint_dir}")
+
+        self.lr = lr
 
     def _train_epoch(self, train_loader: DataLoader, epoch) -> float:
-        """
-        Train the model for one epoch with teacher forcing.
-
-        Args:
-            train_loader: DataLoader for training data
-            epoch: Current epoch number
-
-        Returns:
-            float: Average training loss for the epoch
-        """
         self.model.train()
         epoch_loss = 0.0
         num_batches = 0
@@ -89,16 +78,17 @@ class TransformerTrainer(ModelTrainer):
             seq_len = targets.shape[1]
             self.optimizer.zero_grad()
 
-            out = self.model(
-                x=inputs,
-                y_input=targets.unsqueeze(-1),
-                teacher_forcing_ratio=self.teacher_forcing_ratio
-            )
-            out = out.squeeze(-1)
+            # Forward pass is simpler than full transformer since we don't need teacher forcing
+            outputs = self.model(inputs)
 
-            loss = self.criterion(out, targets) / seq_len
+            # Ensure outputs match target shape
+            if outputs.size() != targets.size():
+                outputs = outputs.view(targets.size())
+
+            loss = self.criterion(outputs, targets) / seq_len
             loss.backward()
 
+            # Gradient clipping
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), max_norm=1.0)
 
@@ -152,20 +142,7 @@ class TransformerTrainer(ModelTrainer):
               train_loader: DataLoader,
               val_loader: Optional[DataLoader] = None,
               save_best: bool = True,
-              savename: Optional[str] = 'best_transformer') -> Dict[str, Union[torch.Tensor, List[float]]]:
-        """
-        Train the model for multiple epochs.
-
-        Args:
-            epochs: Number of epochs to train
-            train_loader: DataLoader for training data
-            val_loader: DataLoader for validation data (optional)
-            save_best: Whether to save the best model state
-            savename: Name to use when saving the model
-
-        Returns:
-            Dict containing training history
-        """
+              savename: Optional[str] = 'best_encoder_transformer') -> Dict[str, Union[torch.Tensor, List[float]]]:
         if save_best:
             assert (val_loader is not None)
 
@@ -174,7 +151,7 @@ class TransformerTrainer(ModelTrainer):
             epochs, device=self.device) if val_loader is not None else []
 
         self.logger.info(
-            f'Beginning Transformer Training on {epochs} epochs with initial lr {self.lr} and teacher forcing ratio {self.teacher_forcing_ratio}.')
+            f'Beginning Encoder Transformer Training on {epochs} epochs with initial lr {self.lr}.')
 
         self.model.train()
 
@@ -198,7 +175,7 @@ class TransformerTrainer(ModelTrainer):
 
         if savename:
             self.logger.info("Saving...")
-            save_dir = "modelsave/transformer"
+            save_dir = "modelsave/encoder_transformer"
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
                 self.logger.info(f"Created directory: {save_dir}")
@@ -207,6 +184,8 @@ class TransformerTrainer(ModelTrainer):
         return {'train_loss': self.history['train_loss'].cpu(), 'val_loss': self.history['val_loss'].cpu() if isinstance(self.history['val_loss'], torch.Tensor) else self.history['val_loss']}
 
     def test(self, test_loader: DataLoader, train_norm: DataTransform = None) -> Dict[str, Any]:
+        print('HERE', train_norm)
+
         self.model.eval()
 
         if train_norm is not None:
@@ -232,15 +211,15 @@ class TransformerTrainer(ModelTrainer):
                     x_transformed = train_norm.transform(inputs)
                 except:
                     x_transformed = inputs
-
-                std_predictions = self.model.predict(
-                    x_transformed, targets.size(1))
-
                 try:
                     std_targets = train_norm.transform(
-                        targets.unsqueeze(-1), transform_col=0).squeeze()
+                        targets.unsqueeze(-1), transform_col=0)
                 except:
                     std_targets = targets
+
+                std_predictions = self.model.predict(
+                    x_transformed, std_targets.size(1))
+
 
                 if std_predictions.size() != std_targets.size():
                     std_predictions = std_predictions.view(std_targets.size())
@@ -292,12 +271,6 @@ class TransformerTrainer(ModelTrainer):
         }
 
     def save_model(self, path: str) -> None:
-        """
-        Save the model to disk.
-
-        Args:
-            path: Path to save the model
-        """
         save_dict = {
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
@@ -307,7 +280,6 @@ class TransformerTrainer(ModelTrainer):
                 'val_loss': self.history['val_loss'].cpu() if isinstance(self.history['val_loss'], torch.Tensor) else self.history['val_loss'],
                 'test_loss': self.history['test_loss']
             },
-            'teacher_forcing_ratio': self.teacher_forcing_ratio,
             'pre_norm': getattr(self.model, 'pre_norm', False),
             'device': str(self.device)
         }
@@ -316,14 +288,12 @@ class TransformerTrainer(ModelTrainer):
         self.logger.info(f"Model saved to {path}")
 
     def load_model(self, path: str, load_best: bool = True) -> None:
-        """
-        Load the model from disk.
-
-        Args:
-            path: Path to load the model from
-            load_best: Whether to load the best model state
-        """
+        # Load checkpoint with correct device mapping
         checkpoint = torch.load(path, map_location=self.device)
+
+        # Set model's device attribute first
+        if hasattr(self.model, 'device'):
+            self.model.device = self.device
 
         if load_best and checkpoint['best_model_state'] is not None:
             self.model.load_state_dict(checkpoint['best_model_state'])
@@ -333,22 +303,21 @@ class TransformerTrainer(ModelTrainer):
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.history = checkpoint['history']
             self.best_model_state = checkpoint['best_model_state']
-            if 'teacher_forcing_ratio' in checkpoint:
-                self.teacher_forcing_ratio = checkpoint['teacher_forcing_ratio']
             if 'pre_norm' in checkpoint:
                 if hasattr(self.model, 'pre_norm'):
                     self.model.pre_norm = checkpoint['pre_norm']
             self.logger.info(f"Loaded model from {path}")
 
+        # Explicitly move model to the specified device
         self.model.to(self.device)
 
-        for state in self.optimizer.state.values():
-            for k, v in state.items():
-                if isinstance(v, torch.Tensor):
-                    state[k] = v.to(self.device)
+        # Sync optimizer state with the device
+        self.sync_optimizer_device()
+
+        # Log the device being used
+        self.logger.info(f"Model loaded and moved to {self.device}")
 
     def plot_loss_curves(self, save_path=None):
-        """Plot training and validation loss curves."""
         plt.figure(figsize=(10, 6))
 
         train_loss = self.history['train_loss'].cpu().numpy() if isinstance(
@@ -372,3 +341,26 @@ class TransformerTrainer(ModelTrainer):
             self.logger.info(f"Loss curves saved to {save_path}")
 
         plt.show()
+
+    def sync_optimizer_device(self):
+        """
+        Ensure optimizer state tensors are on the same device as the model.
+        Call this method after moving model to a different device.
+        """
+        self.logger.info(f"Syncing optimizer state to device: {self.device}")
+        for param_group in self.optimizer.param_groups:
+            for param in param_group['params']:
+                if param.device != self.device:
+                    self.logger.info(
+                        f"Moving parameter from {param.device} to {self.device}")
+                    param.data = param.data.to(self.device)
+                    if param.grad is not None:
+                        param.grad.data = param.grad.data.to(self.device)
+
+        for state in self.optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    if v.device != self.device:
+                        state[k] = v.to(self.device)
+
+        self.logger.info("Optimizer state synchronized with device")

@@ -1,0 +1,15 @@
+{
+    "model_name": "ffnn",
+    "job_type": "grid_search",
+    "data_path": "data/datasets/france_data",
+    "lr": 0.001,
+    "epochs": 50,
+    "scheduler": "sinusoidal",
+    "save_name": "ffnn_france",
+    "param_grid": {
+      "num_hidden": [2, 3, 4, 5, 6],
+      "hidden_size": [128, 256, 512],
+      "dropout": [0.1, 0.2]
+    }
+  }
+  

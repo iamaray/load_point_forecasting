@@ -3,7 +3,7 @@
   "job_type": "grid_search",
   "data_path": "data/datasets/us_homestead_data",
   "lr": 0.001,
-  "epochs": 50,
+  "epochs": 20,
   "scheduler": "sinusoidal",
   "save_name": "ffnn_homestead",
   "param_grid": {

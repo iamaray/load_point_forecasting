@@ -1,0 +1,17 @@
+{
+    "model_name": "encoder_transformer",
+    "job_type": "grid_search",
+    "data_path": "data/datasets/france_data",
+    "lr": 0.0007,
+    "epochs": 100,
+    "scheduler": "sinusoidal",
+    "save_name": "encoder_transformer_france",
+    "param_grid": {
+      "d_model": [64, 128, 256],
+      "nhead": [4, 8, 16],
+      "num_encoder_layers": [2, 3, 4],
+      "dim_feedforward": [512, 1024],
+      "pre_norm": [false, true],
+      "dropout": [0.1, 0.2]
+    }
+  } 
