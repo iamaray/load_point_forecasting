@@ -103,3 +103,34 @@ def LSTM_prep_cfg(
     cfg['param_grid']['forecast_length'] = [y_shape[-1]]
 
     return cfg
+
+
+if __name__ == "__main__":
+    batch_size = 64
+    num_feats = 8
+
+    # hourly granularity
+    prediction_length_h = 24
+    input_length_h = 336
+    lstm_input_h = torch.randn((batch_size, input_length_h, num_feats))
+    lstm_output_h = torch.randn((batch_size, prediction_length_h))
+
+    # 15-minute granularity
+    prediction_length_q = prediction_length_h * 4
+    input_length_q = input_length_h * 4
+    lstm_input_q = torch.randn((batch_size, input_length_q, num_feats))
+    lstm_output_q = torch.randn((batch_size, prediction_length_q))
+
+    lstm_h = LSTMWrapper(input_size=num_feats, hidden_size=128,
+                         forecast_length=prediction_length_h)
+    out_shape = lstm_h(lstm_input_h)[0].shape
+    print(
+        f"model output shape: {out_shape} vs expected: {lstm_output_h.shape}")
+    assert (out_shape == lstm_output_h.shape)
+
+    lstm_q = LSTMWrapper(input_size=num_feats, hidden_size=128,
+                         forecast_length=prediction_length_q)
+    out_shape = lstm_q(lstm_input_q)[0].shape
+    print(
+        f"model output shape: {out_shape} vs expected: {lstm_output_q.shape}")
+    assert (out_shape == lstm_output_q.shape)

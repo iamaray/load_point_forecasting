@@ -1,10 +1,6 @@
 import torch
 import torch.nn as nn
-from transformer.layers import (
-    TimeStepEmbedder,
-    PositionalEncoder,
-    EncoderLayer
-)
+from transformer.layers import *
 
 
 class EncoderTransformer(nn.Module):
@@ -187,3 +183,47 @@ def EncoderTransformer_prep_cfg(param_dict, x_shape, y_shape):
         config['param_grid']['pre_norm'] = [False]
 
     return config
+
+
+if __name__ == "__main__":
+    batch_size = 64
+    num_feats = 8
+
+    # hourly granularity
+    prediction_length_h = 24
+    input_length_h = 336
+    encoder_transformer_input_h = torch.randn(
+        (batch_size, input_length_h, num_feats))
+    encoder_transformer_output_h = torch.randn(
+        (batch_size, prediction_length_h))
+
+    # 15-minute granularity
+    prediction_length_q = prediction_length_h * 4
+    input_length_q = input_length_h * 4
+    encoder_transformer_input_q = torch.randn(
+        (batch_size, input_length_q, num_feats))
+    encoder_transformer_output_q = torch.randn(
+        (batch_size, prediction_length_q))
+
+    # Initialize models for each granularity
+    encoder_transformer_h = EncoderTransformer(
+        input_dim=num_feats,
+        max_seq_len=input_length_h,
+        pred_len=prediction_length_h
+    )
+    out_shape = encoder_transformer_h.predict(
+        encoder_transformer_input_h).shape
+    print(
+        f"model output shape: {out_shape} vs expected: {encoder_transformer_output_h.shape}")
+    assert (out_shape == encoder_transformer_output_h.shape)
+
+    encoder_transformer_q = EncoderTransformer(
+        input_dim=num_feats,
+        max_seq_len=input_length_q,
+        pred_len=prediction_length_q
+    )
+    out_shape = encoder_transformer_q.predict(
+        encoder_transformer_input_q).shape
+    print(
+        f"model output shape: {out_shape} vs expected: {encoder_transformer_output_q.shape}")
+    assert (out_shape == encoder_transformer_output_q.shape)

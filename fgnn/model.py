@@ -218,3 +218,45 @@ def FGN_prep_cfg(
     cfg['param_grid']['feature_size'] = [x_shape[-1]]
 
     return cfg
+
+
+if __name__ == "__main__":
+    batch_size = 64
+    num_feats = 8
+
+    # hourly granularity
+    prediction_length_h = 24
+    input_length_h = 336
+    fgnn_input_h = torch.randn((batch_size, input_length_h, num_feats))
+    fgnn_output_h = torch.randn((batch_size, prediction_length_h))
+
+    # 15-minute granularity
+    prediction_length_q = prediction_length_h * 4
+    input_length_q = input_length_h * 4
+    fgnn_input_q = torch.randn((batch_size, input_length_q, num_feats))
+    fgnn_output_q = torch.randn((batch_size, prediction_length_q))
+
+    # Initialize models for each granularity
+    fgnn_h = FGN(
+        pre_length=prediction_length_h,
+        embed_size=64,
+        feature_size=num_feats,
+        seq_length=input_length_h,
+        hidden_size=128
+    )
+    out_shape = fgnn_h(fgnn_input_h).shape
+    print(
+        f"model output shape: {out_shape} vs expected: {fgnn_output_h.shape}")
+    assert (out_shape == fgnn_output_h.shape)
+
+    fgnn_q = FGN(
+        pre_length=prediction_length_q,
+        embed_size=64,
+        feature_size=num_feats,
+        seq_length=input_length_q,
+        hidden_size=128
+    )
+    out_shape = fgnn_q(fgnn_input_q).shape
+    print(
+        f"model output shape: {out_shape} vs expected: {fgnn_output_q.shape}")
+    assert (out_shape == fgnn_output_q.shape)
