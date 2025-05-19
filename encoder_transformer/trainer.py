@@ -107,14 +107,13 @@ class EncoderTransformerTrainer(ModelTrainer):
         with torch.no_grad():
             for batch in val_loader:
                 inputs, targets = self._move_to_device(batch)
-                seq_len = targets.size(1)
 
                 predictions = self.model.predict(inputs, targets.size(1))
 
                 if predictions.size() != targets.size():
                     predictions = predictions.view(targets.size())
 
-                loss = self.criterion(predictions, targets) / seq_len
+                loss = self.criterion(predictions, targets)
                 val_loss += loss.item()
                 num_batches += 1
 
@@ -354,6 +353,7 @@ class EncoderTransformerDiffusionTrainer:
         model,
         forward_process,
         criterion=SNRGammaMSE(),
+        post_criterion=nn.MSELoss(),
         lr=0.001,
         var_schedule=None,
         device=None,
@@ -367,6 +367,7 @@ class EncoderTransformerDiffusionTrainer:
         self.forward_proc = forward_process
         
         self.criterion = criterion
+        self.post_criterion = post_criterion
         
     def _pre_train_epoch(self, diffusion_loader: DiffusionLoader):
         epoch_loss = 0.0
@@ -396,13 +397,58 @@ class EncoderTransformerDiffusionTrainer:
             epoch_loss += (draw_loss / max_draws)
         return epoch_loss / num_batch
     
+    def _post_train_epoch(self, diffusion_loader: DiffusionLoader):
+        self.model.train()
+        epoch_loss = 0.0
+        num_batch = 0
+        
+        for x, y_lst in diffusion_loader:
+            x = x.to(self.device)
+            y0 = y_lst[0].to(self.device)
+            out = self.model(x, y0)
+            
+            loss = self.post_criterion(out, y0)
+            loss.backward()
+            
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), max_norm=1.0
+            )
+            
+            self.optimizer.step()
+            
+            epoch_loss += loss
+            num_batch += 1
+        
+        return epoch_loss / num_batch
+        
+    def _post_eval_epoch(self, val_loader: DataLoader):
+        self.model.eval()
+        
+        val_loss = 0.0
+        num_batches = 0
+        
+        for x, y in val_loader:
+            x = x.to(self.device)
+            y = y.to(self.device)
+            
+            preds = self.model(x, None)
+            loss = self.post_criterion(preds, y)
+            val_loss += loss
+            num_batches += 1
+            
+        return val_loss / num_batches
+    
     def pre_train(self, num_epochs, diffusion_loader: DiffusionLoader):
+        print("STARTING PRE-TRAINING")
+        
+        self.model.pre_train()
+        
         for epoch in range(num_epochs):
             train_loss = self._train_epoch(diffusion_loader)
             
             self.scheduler.step()
             
-            print(f"Epoch {epoch + 1}/{num_epochs} -- Diffusion Loss: {train_loss}")
+            print(f"[PRE-TRAINING] Epoch {epoch + 1}/{num_epochs} -- Diffusion Loss: {train_loss}")
             
         save_dir = "modelsave/encoder_transformer/pre_training/diffusion"
         os.makedirs(save_dir, exist_ok=True)
@@ -413,3 +459,28 @@ class EncoderTransformerDiffusionTrainer:
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict(),
         }, os.path.join(save_dir, 'model.pt'))
+        
+        return {
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'scheduler_state_dict': self.scheduler.state_dict()
+            }
+        
+    def train(
+        self,
+        num_epochs,
+        diffusion_loader: DiffusionLoader,
+        val_loader: DataLoader):
+        
+        print("STARTING FINE-TUNING")
+        
+        self.model.post_train()
+        
+        for epoch in range(num_epochs):
+            train_loss = self._post_train_epoch(diffusion_loader)
+            val_loss = self._post_eval_epoch(val_loader)
+            self.scheduler.step()
+            
+            print(f"[FINE TUNING] Epoch {epoch + 1}/{num_epochs} -- Train Loss: {train_loss}, Val Loss: {val_loss}\n")
+        
+        print("Finished fine tuning.")
