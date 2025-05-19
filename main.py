@@ -50,6 +50,10 @@ trainers = {
     'encoder_transformer': EncoderTransformerTrainer
 }
 
+diffusion_trainers = {
+    'encoder_transformer_basic_diffusion': 
+}
+
 
 def main(cfg_path):
     try:
@@ -100,7 +104,8 @@ def main(cfg_path):
         )
     elif job_type == 'single_model':
         raise NotImplementedError()
-
+    elif job_type == 'diffusion':
+        
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

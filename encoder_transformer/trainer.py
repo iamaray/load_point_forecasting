@@ -21,7 +21,6 @@ class EncoderTransformerTrainer(ModelTrainer):
         device=None,
         checkpoint_dir='checkpoints',
     ):
-        # Setup logging first for better initialization messages
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
@@ -31,7 +30,6 @@ class EncoderTransformerTrainer(ModelTrainer):
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-        # Determine device with better logging
         self.device = device if device is not None else torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -44,24 +42,19 @@ class EncoderTransformerTrainer(ModelTrainer):
         else:
             self.logger.info("CUDA not available, using CPU")
 
-        # Set model's device attribute if it exists
         if hasattr(model, 'device'):
             model.device = self.device
 
-        # Move model to device
         model.to(self.device)
         self.logger.info(f"Model moved to {self.device}")
 
-        # Setup optimizer
         if optimizer is None:
             optimizer = torch.optim.Adam(model.parameters(), lr=lr)
             self.logger.info(f"Created Adam optimizer with lr={lr}")
 
-        # Call parent init
         super(EncoderTransformerTrainer, self).__init__(
             model, optimizer, criterion, scheduler, device=self.device)
 
-        # Setup checkpoint directory
         self.checkpoint_dir = checkpoint_dir
         os.makedirs(checkpoint_dir, exist_ok=True)
         self.logger.info(f"Using checkpoint directory: {checkpoint_dir}")
@@ -78,17 +71,14 @@ class EncoderTransformerTrainer(ModelTrainer):
             seq_len = targets.shape[1]
             self.optimizer.zero_grad()
 
-            # Forward pass is simpler than full transformer since we don't need teacher forcing
             outputs = self.model(inputs)
 
-            # Ensure outputs match target shape
             if outputs.size() != targets.size():
                 outputs = outputs.view(targets.size())
 
             loss = self.criterion(outputs, targets) / seq_len
             loss.backward()
 
-            # Gradient clipping
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), max_norm=1.0)
 
@@ -308,13 +298,8 @@ class EncoderTransformerTrainer(ModelTrainer):
                     self.model.pre_norm = checkpoint['pre_norm']
             self.logger.info(f"Loaded model from {path}")
 
-        # Explicitly move model to the specified device
         self.model.to(self.device)
-
-        # Sync optimizer state with the device
         self.sync_optimizer_device()
-
-        # Log the device being used
         self.logger.info(f"Model loaded and moved to {self.device}")
 
     def plot_loss_curves(self, save_path=None):
