@@ -51,7 +51,7 @@ trainers = {
 }
 
 diffusion_trainers = {
-    'encoder_transformer_basic_diffusion': 
+    'encoder_transformer_diffusion': 
 }
 
 

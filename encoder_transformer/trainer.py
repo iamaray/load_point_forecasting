@@ -8,7 +8,7 @@ import logging
 from utils.templates import ModelTrainer
 from processing.transforms import DataTransform
 from utils.metrics import calculate_all_metrics
-
+from pretraining.diffusion import SNRGammaMSE, DiffusionLoader, ForwardProcess
 
 class EncoderTransformerTrainer(ModelTrainer):
     def __init__(
@@ -174,7 +174,6 @@ class EncoderTransformerTrainer(ModelTrainer):
         return {'train_loss': self.history['train_loss'].cpu(), 'val_loss': self.history['val_loss'].cpu() if isinstance(self.history['val_loss'], torch.Tensor) else self.history['val_loss']}
 
     def test(self, test_loader: DataLoader, train_norm: DataTransform = None) -> Dict[str, Any]:
-        print('HERE', train_norm)
 
         self.model.eval()
 
@@ -278,10 +277,8 @@ class EncoderTransformerTrainer(ModelTrainer):
         self.logger.info(f"Model saved to {path}")
 
     def load_model(self, path: str, load_best: bool = True) -> None:
-        # Load checkpoint with correct device mapping
         checkpoint = torch.load(path, map_location=self.device)
 
-        # Set model's device attribute first
         if hasattr(self.model, 'device'):
             self.model.device = self.device
 
@@ -349,3 +346,70 @@ class EncoderTransformerTrainer(ModelTrainer):
                         state[k] = v.to(self.device)
 
         self.logger.info("Optimizer state synchronized with device")
+
+
+class EncoderTransformerDiffusionTrainer:
+    def __init__(
+        self,
+        model,
+        forward_process,
+        criterion=SNRGammaMSE(),
+        lr=0.001,
+        var_schedule=None,
+        device=None,
+    ):
+        self.device = device if device is not None else torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
+        
+        self.model = model.to(self.device)
+        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=lr)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=40)
+        self.forward_proc = forward_process
+        
+        self.criterion = criterion
+        
+    def _pre_train_epoch(self, diffusion_loader: DiffusionLoader):
+        epoch_loss = 0.0
+        num_batch = 0
+        for x, y_lst in diffusion_loader:
+            y0 = y_lst[0].to(self.device)
+            max_draws = torch.randint(1, 10, (1,), device=self.device).item()
+            draw_loss = 0.0
+            for _ in range(max_draws):
+                self.optimizer.zero_grad()
+                t = torch.randint(1, len(y_lst), (1,), device=self.device).item()
+                
+                x = x.to(self.device)
+                yt = y_lst[t].to(self.device)
+                
+                outs = self.model(x, yt)
+                loss = self.criterion(outs, y0, self.forward_proc.SNR[t])
+                loss.backward()
+                
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), max_norm=5.0)
+                
+                self.optimizer.step()
+                draw_loss += loss
+                num_batch += 1
+                
+            epoch_loss += (draw_loss / max_draws)
+        return epoch_loss / num_batch
+    
+    def pre_train(self, num_epochs, diffusion_loader: DiffusionLoader):
+        for epoch in range(num_epochs):
+            train_loss = self._train_epoch(diffusion_loader)
+            
+            self.scheduler.step()
+            
+            print(f"Epoch {epoch + 1}/{num_epochs} -- Diffusion Loss: {train_loss}")
+            
+        save_dir = "modelsave/encoder_transformer/pre_training/diffusion"
+        os.makedirs(save_dir, exist_ok=True)
+        print(f"Diffusion training finished, saving model to {save_dir}")
+        
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'scheduler_state_dict': self.scheduler.state_dict(),
+        }, os.path.join(save_dir, 'model.pt'))

@@ -34,7 +34,7 @@ class DiffusionLoader:
             yield x_seq, y
             
 class SNRGammaMSE:
-    def __init__(self, gamma):
+    def __init__(self, gamma=5):
         self.gamma = gamma
         self.MSE = nn.MSELoss()
         

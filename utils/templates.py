@@ -26,16 +26,13 @@ class ModelTrainer(nn.Module):
         self.device = device if device is not None else torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
 
-        # Ensure model is on the correct device
         self.model = model.to(self.device)
 
-        # Move optimizer parameters to the correct device
         for param in optimizer.param_groups:
             for p in param['params']:
                 p.data = p.data.to(self.device)
         self.optimizer = optimizer
 
-        # Move criterion to device if it has parameters
         self.criterion = criterion if criterion is not None else nn.MSELoss()
         if hasattr(self.criterion, 'parameters'):
             self.criterion = self.criterion.to(self.device)
@@ -166,18 +163,3 @@ class ModelTestOut:
     mae: float
     mape: float
     smape: float
-
-
-@dataclass
-class FFNNConfig:
-    fag: str
-
-
-@dataclass
-class LSTMConfig:
-    fag: str
-
-
-@dataclass
-class FGNNConfig:
-    fag: str
