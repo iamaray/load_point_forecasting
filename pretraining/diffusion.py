@@ -9,7 +9,7 @@ class ForwardProcess:
         self.T = variance_schedule.shape[0]
         
         alphas = 1 - self.betas
-        bar_alphas = torch.cumprod(alphas)
+        bar_alphas = torch.cumprod(alphas, dim=0)
         self.SNR = bar_alphas / (1 - bar_alphas)
         
         self.raw_coeffs = torch.sqrt(bar_alphas)
@@ -30,8 +30,8 @@ class DiffusionLoader:
     
     def __iter__(self):
         for x, y0 in self.base_loader:
-            x_seq = self.forward_process(x0)
-            yield x_seq, y
+            y_seq = self.forward_process(y0)
+            yield x, y_seq
             
 class SNRGammaMSE:
     def __init__(self, gamma=5):

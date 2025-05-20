@@ -9,6 +9,8 @@ from utils.templates import ModelTrainer
 from processing.transforms import DataTransform
 from utils.metrics import calculate_all_metrics
 from pretraining.diffusion import SNRGammaMSE, DiffusionLoader, ForwardProcess
+import datetime
+
 
 class EncoderTransformerTrainer(ModelTrainer):
     def __init__(
@@ -208,7 +210,6 @@ class EncoderTransformerTrainer(ModelTrainer):
                 std_predictions = self.model.predict(
                     x_transformed, std_targets.size(1))
 
-
                 if std_predictions.size() != std_targets.size():
                     std_predictions = std_predictions.view(std_targets.size())
 
@@ -355,132 +356,262 @@ class EncoderTransformerDiffusionTrainer:
         criterion=SNRGammaMSE(),
         post_criterion=nn.MSELoss(),
         lr=0.001,
-        var_schedule=None,
         device=None,
     ):
         self.device = device if device is not None else torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
-        
+
         self.model = model.to(self.device)
-        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=lr)
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer=self.optimizer, T_max=40)
+        self.optimizer = torch.optim.Adam(
+            params=self.model.parameters(), lr=lr)
+        self.lr = lr
+        self.scheduler = None  # Initialize in pre_train/train instead
         self.forward_proc = forward_process
-        
+
         self.criterion = criterion
         self.post_criterion = post_criterion
-        
+
+        self.pre_train_history = []
+        self.post_train_history = []
+        self.post_val_history = []
+
     def _pre_train_epoch(self, diffusion_loader: DiffusionLoader):
+        current_lr = self.optimizer.param_groups[0]['lr']
+        print(f"Current learning rate: {current_lr:.6f}")
+
         epoch_loss = 0.0
         num_batch = 0
         for x, y_lst in diffusion_loader:
             y0 = y_lst[0].to(self.device)
             max_draws = torch.randint(1, 10, (1,), device=self.device).item()
             draw_loss = 0.0
+            print("MAX_DRAWS:", max_draws)
             for _ in range(max_draws):
                 self.optimizer.zero_grad()
-                t = torch.randint(1, len(y_lst), (1,), device=self.device).item()
-                
+                t = torch.randint(1, len(y_lst), (1,),
+                                  device=self.device).item()
+
                 x = x.to(self.device)
                 yt = y_lst[t].to(self.device)
-                
+
                 outs = self.model(x, yt)
+
                 loss = self.criterion(outs, y0, self.forward_proc.SNR[t])
                 loss.backward()
-                
+
                 torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), max_norm=5.0)
-                
+                    self.model.parameters(), max_norm=1.0)
+
                 self.optimizer.step()
                 draw_loss += loss
                 num_batch += 1
-                
+
             epoch_loss += (draw_loss / max_draws)
         return epoch_loss / num_batch
-    
+
     def _post_train_epoch(self, diffusion_loader: DiffusionLoader):
+        current_lr = self.optimizer.param_groups[0]['lr']
+        print(f"Current learning rate: {current_lr:.6f}")
+
         self.model.train()
         epoch_loss = 0.0
         num_batch = 0
-        
+
         for x, y_lst in diffusion_loader:
             x = x.to(self.device)
             y0 = y_lst[0].to(self.device)
-            out = self.model(x, y0)
-            
+            out = self.model(x, None)
+
             loss = self.post_criterion(out, y0)
             loss.backward()
-            
+
             torch.nn.utils.clip_grad_norm_(
                 self.model.parameters(), max_norm=1.0
             )
-            
+
             self.optimizer.step()
-            
+
             epoch_loss += loss
             num_batch += 1
-        
+
         return epoch_loss / num_batch
-        
+
     def _post_eval_epoch(self, val_loader: DataLoader):
         self.model.eval()
-        
+
         val_loss = 0.0
         num_batches = 0
-        
+
         for x, y in val_loader:
             x = x.to(self.device)
             y = y.to(self.device)
-            
+
             preds = self.model(x, None)
             loss = self.post_criterion(preds, y)
             val_loss += loss
             num_batches += 1
-            
+
         return val_loss / num_batches
-    
+
     def pre_train(self, num_epochs, diffusion_loader: DiffusionLoader):
         print("STARTING PRE-TRAINING")
-        
+
+        # Create new scheduler for pre-training phase
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer=self.optimizer,
+            T_max=num_epochs,
+            eta_min=self.lr / 100
+        )
+
         self.model.pre_train()
-        
+
         for epoch in range(num_epochs):
-            train_loss = self._train_epoch(diffusion_loader)
-            
+            train_loss = self._pre_train_epoch(diffusion_loader)
+
             self.scheduler.step()
-            
-            print(f"[PRE-TRAINING] Epoch {epoch + 1}/{num_epochs} -- Diffusion Loss: {train_loss}")
-            
+
+            print(
+                f"[PRE-TRAINING] Epoch {epoch + 1}/{num_epochs} -- Diffusion Loss: {train_loss}")
+
+            self.pre_train_history.append(train_loss)
+
         save_dir = "modelsave/encoder_transformer/pre_training/diffusion"
         os.makedirs(save_dir, exist_ok=True)
         print(f"Diffusion training finished, saving model to {save_dir}")
-        
+
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         torch.save({
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict(),
-        }, os.path.join(save_dir, 'model.pt'))
-        
+        }, os.path.join(save_dir, f'pretrained_model_{timestamp}.pt'))
+
         return {
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict()
-            }
-        
+        }
+
     def train(
-        self,
-        num_epochs,
-        diffusion_loader: DiffusionLoader,
-        val_loader: DataLoader):
-        
+            self,
+            num_epochs,
+            diffusion_loader: DiffusionLoader,
+            val_loader: DataLoader):
+
         print("STARTING FINE-TUNING")
-        
+
+        # Create new scheduler for fine-tuning phase
+        # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        #     optimizer=self.optimizer,
+        #     T_max=num_epochs
+        # )
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer=self.optimizer)
+
         self.model.post_train()
-        
+
         for epoch in range(num_epochs):
             train_loss = self._post_train_epoch(diffusion_loader)
             val_loss = self._post_eval_epoch(val_loader)
-            self.scheduler.step()
-            
-            print(f"[FINE TUNING] Epoch {epoch + 1}/{num_epochs} -- Train Loss: {train_loss}, Val Loss: {val_loss}\n")
-        
-        print("Finished fine tuning.")
+            self.scheduler.step(val_loss)
+
+            print(
+                f"[FINE TUNING] Epoch {epoch + 1}/{num_epochs} -- Train Loss: {train_loss}, Val Loss: {val_loss}\n")
+
+            self.post_train_history.append(train_loss)
+            self.post_val_history.append(val_loss)
+
+        print("Finished fine-tuning.")
+
+    def test(self, test_loader: DataLoader, train_norm: DataTransform = None) -> Dict[str, Any]:
+        """
+        Test the model on the test dataset.
+
+        Args:
+            test_loader: DataLoader for the test dataset
+            train_norm: Optional normalization transform used during training
+
+        Returns:
+            Dictionary containing test results including metrics and predictions
+        """
+        self.model.eval()
+
+        if train_norm is not None:
+            train_norm.set_device(self.device)
+        else:
+            def train_norm(x): return x
+
+        test_loss = 0.0
+        num_batches = 0
+
+        all_std_predictions = []
+        all_std_targets = []
+        all_predictions = []
+        all_targets = []
+
+        with torch.no_grad():
+            for batch in test_loader:
+                inputs, targets = batch
+                inputs = inputs.to(self.device)
+                targets = targets.to(self.device)
+                seq_len = targets.size(1)
+
+                try:
+                    x_transformed = train_norm.transform(inputs)
+                except:
+                    x_transformed = inputs
+                try:
+                    std_targets = train_norm.transform(
+                        targets.unsqueeze(-1), transform_col=0)
+                except:
+                    std_targets = targets
+
+                std_predictions = self.model(x_transformed, None)
+
+                if std_predictions.size() != std_targets.size():
+                    std_predictions = std_predictions.view(std_targets.size())
+
+                loss = self.post_criterion(
+                    std_predictions, std_targets) / seq_len
+                test_loss += loss.item()
+                num_batches += 1
+
+                all_std_predictions.append(std_predictions.cpu())
+                all_std_targets.append(std_targets.cpu())
+
+                try:
+                    predictions = train_norm.reverse(
+                        transformed=std_predictions.unsqueeze(-1)).squeeze()
+                except:
+                    predictions = std_predictions
+
+                all_predictions.append(predictions.cpu())
+                all_targets.append(targets.cpu())
+
+        avg_loss = test_loss / num_batches
+
+        std_predictions = torch.cat(all_std_predictions, dim=0)
+        std_targets = torch.cat(all_std_targets, dim=0)
+        predictions = torch.cat(all_predictions, dim=0)
+        targets = torch.cat(all_targets, dim=0)
+
+        metrics = calculate_all_metrics(
+            y_pred_unnorm=predictions,
+            y_true_unnorm=targets,
+            y_pred=std_predictions,
+            y_true=std_targets
+        )
+
+        print(f"Test Loss: {avg_loss:.6f}")
+        print(
+            f"MSE: {metrics['mse']:.6f}, RMSE: {metrics['rmse']:.6f}, MAE: {metrics['mae']:.6f}")
+        print(f"MAPE: {metrics['mape']:.6f}%, SMAPE: {metrics['smape']:.6f}%")
+
+        return {
+            'test_loss': avg_loss,
+            'predictions': std_predictions,
+            'targets': std_targets,
+            'original_predictions': predictions,
+            'original_targets': targets,
+            'metrics': metrics
+        }
