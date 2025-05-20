@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -Jencoder_transformer_elia              # Job name
+#SBATCH -Jencoder_transformer_ercot_diffusion              # Job name
 #SBATCH --account=gts-sd111                      # charge account
 #SBATCH -N1                                      # Number of nodes and cores per node required
 #SBATCH --mem-per-cpu=12G                        # Memory per core
