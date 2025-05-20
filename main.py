@@ -19,18 +19,14 @@ from lstm_atten_lstm.model import LSTMAttenLSTM, LSTMAttenLSTM_prep_cfg
 from lstm_atten_lstm.trainer import LSTMAttenLSTMTrainer
 
 from encoder_transformer.model import EncoderTransformer, EncoderTransformer_prep_cfg
-from encoder_transformer.trainer import EncoderTransformerTrainer
+from encoder_transformer.trainer import EncoderTransformerTrainer, EncoderTransformerDiffusionTrainer
 
 from dataclasses import dataclass
 from processing.transforms import StandardScaleNorm, MinMaxNorm, TransformSequence
 
-from utils.grid_search import grid_search
+from pretraining.diffusion import ForwardProcess, DiffusionLoader
 
-# @dataclass
-# class DataWrapper:
-#     """Simple data container for FGNN input"""
-#     x: torch.Tensor
-#     y: torch.Tensor = None
+from utils.grid_search import grid_search
 
 models = {
     'ffnn': (FFNN, FFNN_prep_cfg),
@@ -49,6 +45,10 @@ trainers = {
     'lstm_atten_lstm': LSTMAttenLSTMTrainer,
     'encoder_transformer': EncoderTransformerTrainer
 }
+
+# diffusion_trainers = {
+#     'encoder_transformer_diffusion':
+# }
 
 
 def main(cfg_path):
@@ -100,7 +100,33 @@ def main(cfg_path):
         )
     elif job_type == 'single_model':
         raise NotImplementedError()
+    else:
 
+        """
+        THIS IS TEMPORARY... FOR TESTING PURPOSES
+        """
+
+        model = EncoderTransformer(
+            input_dim=config['param_grid']['input_dim'][0],
+            pred_len=config['param_grid']['pred_len'][0],
+            d_model=config['param_grid']['d_model'],
+            nhead=config['param_grid']['nhead'],
+            num_encoder_layers=config['param_grid']['num_encoder_layers'],
+            dim_feedforward=config['param_grid']['dim_feedforward'],
+            pre_norm=config['param_grid']['pre_norm'],
+            dropout=config['param_grid']['dropout'],
+            uses_diffusion=True
+        )
+        forward_proc = ForwardProcess(
+            variance_schedule=torch.linspace(0.1, 0.9, 20))
+        diffus_loader = DiffusionLoader(
+            base_loader=train_loader, forward_process=forward_proc)
+        diffus_trainer = EncoderTransformerDiffusionTrainer(
+            model=model, forward_process=forward_proc)
+
+        diffus_trainer.pre_train(config['pre_epochs'], diffusion_loader=diffus_loader)
+        diffus_trainer.train(config['epochs'], diffusion_loader=diffus_loader, val_loader=val_loader)
+        diffus_trainer.test(test_loader=test_loader, train_norm=transform)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

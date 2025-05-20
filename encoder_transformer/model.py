@@ -11,6 +11,7 @@ class EncoderTransformer(nn.Module):
     def __init__(
         self,
         input_dim,
+        uses_diffusion=False,
         d_model=256,
         nhead=8,
         num_encoder_layers=3,
@@ -25,11 +26,13 @@ class EncoderTransformer(nn.Module):
     ):
         super(EncoderTransformer, self).__init__()
 
-        # Determine the device to use
         self.device = device if device is not None else torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Store model configuration
+        
+        self.pre_training = False
+        self.post_training = False
+        
+        self.uses_diffusion = uses_diffusion
         self.d_model = d_model
         self.input_dim = input_dim
         self.max_seq_len = max_seq_len
@@ -38,13 +41,19 @@ class EncoderTransformer(nn.Module):
         self.pos_enc = None
         self.pre_norm = pre_norm
 
-        # Input embedding layer
         self.input_embedding = TimeStepEmbedder(
             in_feats=input_dim,
             d_model=d_model,
             device=self.device)
+        
+        self.label_embedding = None
+        if self.uses_diffusion:
+            self.label_embedding = TimeStepEmbedder(
+                in_feats=1,
+                d_model=d_model,
+                device=self.device
+            )
 
-        # Positional encoding
         if positional_encoding:
             self.pos_enc = PositionalEncoder(
                 positional_feat=positional_feat,
@@ -52,11 +61,15 @@ class EncoderTransformer(nn.Module):
                 d_model=d_model,
                 device=self.device
             )(None)
-            # Ensure positional encoding is on the correct device
             if self.pos_enc is not None:
                 self.pos_enc = self.pos_enc.to(self.device)
+                
+        self.diffusion_proj = None
+        if self.uses_diffusion:
+            self.diffusion_proj = nn.Linear(
+                in_features=max_seq_len,
+                out_features=pred_len)
 
-        # Encoder layers
         self.encoder_layers = nn.ModuleList([
             EncoderLayer(
                 d_model=d_model,
@@ -69,23 +82,26 @@ class EncoderTransformer(nn.Module):
             for _ in range(num_encoder_layers)
         ])
 
-        # Adaptive pooling to create a fixed-size output
         self.adaptive_pool = nn.AdaptiveAvgPool1d(pred_len).to(self.device)
 
-        # Projection head
         self.output_projection = nn.Linear(
             in_features=d_model,
             out_features=1,
             device=self.device)
 
-        # Dropout layer
         self.dropout = nn.Dropout(dropout)
 
-        # Initialize parameters
         self._init_parameters()
 
-        # Move the entire model to the device
         self.to(self.device)
+
+    def pre_train(self):
+        self.pre_training = True
+        self.post_training = False
+        
+    def post_train(self):
+        self.pre_training = False
+        self.post_training = True
 
     def _init_parameters(self):
         for p in self.parameters():
@@ -93,77 +109,88 @@ class EncoderTransformer(nn.Module):
                 nn.init.xavier_uniform_(p)
 
     def encode(self, x):
-        # Move input to the correct device
         x = x.to(self.device)
 
-        # Apply positional encoding if enabled
         if self.use_pos_enc:
             seq_len = x.size(1)
-            # Make sure positional encoding is on the correct device
             pos_enc = self.pos_enc.to(self.device)
             x = x + pos_enc[:seq_len].unsqueeze(0)
 
-        # Apply dropout to input embeddings
         x = self.dropout(x)
 
-        # Pass through encoder layers
         for encoder_layer in self.encoder_layers:
             x = encoder_layer(x)
 
         return x
 
-    def forward(self, x):
-        # Ensure input is on the correct device
+    def forward(self, x, y=None):
+        if self.pre_training:
+            assert y is not None
+        
         x = x.to(self.device)
+
+        if y is not None:
+            y = y.to(self.device)
+            
         batch_size = x.size(0)
 
-        # Input embedding
         x = self.input_embedding(x)
+        
+        if self.uses_diffusion and (y is not None):
+            B, L, N = x.shape
+            y = y.unsqueeze(-1)
+            
+            assert self.label_embedding is not None
+            y = self.label_embedding(y)                 # [B, pred, d_model]
+            # x = x.view(B * N, L)
+            
+            # assert self.diffusion_proj is not None
+            # x = self.diffusion_proj(x)                  # [B * d_model, pred]
+            # x = x.view(B, self.d_model, self.pred_len)
+            # x = x.transpose(1, -1)                      # [B, pred, d_model]
+            
+            # m = torch.rand(B, self.pred_len, self.d_model, device=self.device)
+            # x = m * x + (1 - m) * y
+            # x = torch.cat([x, y], dim=1)                #[B, 2 * pred =: seq, d_model]
+            x = y
+        
+        encoded = self.encode(x)                        # [batch_size, seq, d_model]
+        encoded = encoded.transpose(1, 2)               # [batch_size, d_model, seq]
 
-        # Encode the sequence
-        encoded = self.encode(x)  # [batch_size, seq_len, d_model]
-
-        # Transpose for pooling (AdaptiveAvgPool1d expects [batch, channels, seq_len])
-        encoded = encoded.transpose(1, 2)  # [batch_size, d_model, seq_len]
-
-        # Apply adaptive pooling to get fixed output size
-        # Ensure adaptive pooling is on the correct device
         self.adaptive_pool = self.adaptive_pool.to(self.device)
-        pooled = self.adaptive_pool(encoded)  # [batch_size, d_model, pred_len]
+        pooled = self.adaptive_pool(encoded)            # [batch_size, d_model, pred_len]
+        pooled = pooled.transpose(1, 2)                 # [batch_size, pred_len, d_model]
 
-        # Transpose back to [batch_size, pred_len, d_model]
-        pooled = pooled.transpose(1, 2)  # [batch_size, pred_len, d_model]
-
-        # Project to output space
-        output = self.output_projection(pooled)  # [batch_size, pred_len, 1]
-
-        # Remove last dimension
-        output = output.squeeze(-1)  # [batch_size, pred_len]
+        output = self.output_projection(pooled)         # [batch_size, pred_len, 1]
+        output = output.squeeze(-1)                     # [batch_size, pred_len]
 
         return output
 
     def predict(self, x, target_len=None):
-        if target_len is None:
-            target_len = self.pred_len
+        if target_len is None or target_len == self.pred_len:
+            return self.forward(x)
 
-        # If target_len is different from self.pred_len, we need to adjust our adaptive pooling
-        if target_len != self.pred_len:
-            original_pool = self.adaptive_pool
-            # Create new adaptive pool with the correct device
-            self.adaptive_pool = nn.AdaptiveAvgPool1d(
-                target_len).to(self.device)
-            result = self.forward(x)
-            self.adaptive_pool = original_pool
-            return result
+        x = x.to(self.device)
+        batch_size = x.size(0)
+        x = self.input_embedding(x)
+        encoded = self.encode(x)  # [batch_size, seq_len, d_model]
+        
+        
+        encoded = encoded.transpose(1, 2)  # [batch_size, d_model, seq_len]
 
-        return self.forward(x)
+        pooled = nn.functional.adaptive_avg_pool1d(
+            encoded, target_len)  # [batch_size, d_model, target_len]
+        pooled = pooled.transpose(1, 2)  # [batch_size, target_len, d_model]
+
+        output = self.output_projection(pooled)  # [batch_size, target_len, 1]
+        output = output.squeeze(-1)  # [batch_size, target_len]
+
+        return output
 
     def to(self, device):
         self.device = device
-        # Make sure positional encoding is moved to the new device
         if self.pos_enc is not None:
             self.pos_enc = self.pos_enc.to(device)
-        # Update the causal mask if it exists
         if hasattr(self, 'mask') and self.mask is not None:
             self.mask = self.mask.to(device)
         return super(EncoderTransformer, self).to(device)

@@ -1,0 +1,18 @@
+{
+    "model_name": "encoder_transformer",
+    "job_type": "diffusion",
+    "data_path": "data/datasets/ercot_data",
+    "lr": 0.0007,
+    "pre_epochs": 70,
+    "epochs": 70,
+    "scheduler": "sinusoidal",
+    "save_name": "encoder_transformer_ercot",
+    "param_grid": {
+      "d_model": 128,
+      "nhead": 4,
+      "num_encoder_layers": 3,
+      "dim_feedforward": 512,
+      "pre_norm": false,
+      "dropout": 0.1
+    }
+  } 
