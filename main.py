@@ -125,6 +125,10 @@ def main(cfg_path):
             model=model, forward_process=forward_proc)
 
         diffus_trainer.pre_train(config['pre_epochs'], diffusion_loader=diffus_loader)
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
         diffus_trainer.train(config['epochs'], diffusion_loader=diffus_loader, val_loader=val_loader)
         diffus_trainer.test(test_loader=test_loader, train_norm=transform)
 

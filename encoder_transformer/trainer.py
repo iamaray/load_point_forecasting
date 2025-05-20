@@ -383,9 +383,10 @@ class EncoderTransformerDiffusionTrainer:
         num_batch = 0
         for x, y_lst in diffusion_loader:
             y0 = y_lst[0].to(self.device)
-            max_draws = torch.randint(1, 10, (1,), device=self.device).item()
+            # max_draws = torch.randint(1, 10, (1,), device=self.device).item()
             draw_loss = 0.0
-            print("MAX_DRAWS:", max_draws)
+            # print("MAX_DRAWS:", max_draws)
+            max_draws = 1
             for _ in range(max_draws):
                 self.optimizer.zero_grad()
                 t = torch.randint(1, len(y_lst), (1,),
@@ -456,7 +457,6 @@ class EncoderTransformerDiffusionTrainer:
     def pre_train(self, num_epochs, diffusion_loader: DiffusionLoader):
         print("STARTING PRE-TRAINING")
 
-        # Create new scheduler for pre-training phase
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer=self.optimizer,
             T_max=num_epochs,
