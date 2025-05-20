@@ -384,30 +384,33 @@ class EncoderTransformerDiffusionTrainer:
         for x, y_lst in diffusion_loader:
             y0 = y_lst[0].to(self.device)
             # max_draws = torch.randint(1, 10, (1,), device=self.device).item()
-            draw_loss = 0.0
+            loss = 0.0
             # print("MAX_DRAWS:", max_draws)
             max_draws = 1
-            for _ in range(max_draws):
-                self.optimizer.zero_grad()
-                t = torch.randint(1, len(y_lst), (1,),
-                                  device=self.device).item()
+            self.optimizer.zero_grad()
+            for t in range(1, len(y_lst)):
+                # self.optimizer.zero_grad()
+                # t = torch.randint(1, len(y_lst), (1,),
+                #                   device=self.device).item()
 
                 x = x.to(self.device)
                 yt = y_lst[t].to(self.device)
+                y_prev = y_lst[t-1].to(self.device)
 
                 outs = self.model(x, yt)
 
-                loss = self.criterion(outs, y0, self.forward_proc.SNR[t])
-                loss.backward()
+                loss += self.criterion(y_prev, y0, self.forward_proc.SNR[t])
 
                 torch.nn.utils.clip_grad_norm_(
                     self.model.parameters(), max_norm=1.0)
 
-                self.optimizer.step()
-                draw_loss += loss
+                # draw_loss += loss
                 num_batch += 1
 
-            epoch_loss += (draw_loss / max_draws)
+            loss.backward()
+            self.optimizer.step()
+            
+            epoch_loss += loss
         return epoch_loss / num_batch
 
     def _post_train_epoch(self, diffusion_loader: DiffusionLoader):
