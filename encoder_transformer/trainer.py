@@ -365,7 +365,7 @@ class EncoderTransformerDiffusionTrainer:
         self.optimizer = torch.optim.Adam(
             params=self.model.parameters(), lr=lr)
         self.lr = lr
-        self.scheduler = None  # Initialize in pre_train/train instead
+        self.scheduler = None 
         self.forward_proc = forward_process
 
         self.criterion = criterion

@@ -118,7 +118,7 @@ def main(cfg_path):
             uses_diffusion=True
         )
         forward_proc = ForwardProcess(
-            variance_schedule=torch.linspace(0.1, 0.9, 20))
+            variance_schedule=torch.linspace(0.1, 1.1, 10))
         diffus_loader = DiffusionLoader(
             base_loader=train_loader, forward_process=forward_proc)
         diffus_trainer = EncoderTransformerDiffusionTrainer(
