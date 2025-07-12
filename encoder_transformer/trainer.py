@@ -379,39 +379,36 @@ class EncoderTransformerDiffusionTrainer:
         current_lr = self.optimizer.param_groups[0]['lr']
         print(f"Current learning rate: {current_lr:.6f}")
 
-        epoch_loss = 0.0
         num_batch = 0
+        loss = 0.0
         for x, y_lst in diffusion_loader:
-            y0 = y_lst[0].to(self.device)
-            # max_draws = torch.randint(1, 10, (1,), device=self.device).item()
-            loss = 0.0
-            # print("MAX_DRAWS:", max_draws)
-            max_draws = 1
             self.optimizer.zero_grad()
-            for t in range(1, len(y_lst)):
-                # self.optimizer.zero_grad()
-                # t = torch.randint(1, len(y_lst), (1,),
-                #                   device=self.device).item()
-
-                x = x.to(self.device)
-                yt = y_lst[t].to(self.device)
-                y_prev = y_lst[t-1].to(self.device)
-
-                outs = self.model(x, yt)
-
-                loss += self.criterion(y_prev, y0, self.forward_proc.SNR[t])
-
-                torch.nn.utils.clip_grad_norm_(
-                    self.model.parameters(), max_norm=1.0)
-
-                # draw_loss += loss
-                num_batch += 1
-
-            loss.backward()
-            self.optimizer.step()
             
-            epoch_loss += loss
-        return epoch_loss / num_batch
+            y0 = y_lst[0].to(self.device)
+            t = torch.randint(1, len(y_lst), (1,),
+                              device=self.device).item()
+
+            x = x.to(self.device)
+            yt = y_lst[t].to(self.device)
+            model_in = yt
+            y0 = y_lst[0].to(self.device)
+            added_noise = None
+            
+            # if self.use_mixup:
+            #     m = torch.rand_like(yt)
+            #     model_in = (m * yt) + ((1-m) * y0)
+            
+            outs = self.model(x, model_in)
+            loss += self.criterion(outs, y0, self.forward_proc.SNR[t])
+            
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), max_norm=1.0)
+
+            num_batch += 1
+
+        loss.backward()
+        self.optimizer.step()
+        return loss / num_batch
 
     def _post_train_epoch(self, diffusion_loader: DiffusionLoader):
         current_lr = self.optimizer.param_groups[0]['lr']
