@@ -65,6 +65,7 @@ def compare(cfg_path: str):
     sharpe_barchart(data_lst)
     sortino_barchart(data_lst)
     profit_factor_barchart(data_lst)
+    max_drawdown_barchart(data_lst)
 
     os.chdir(original_dir)
 

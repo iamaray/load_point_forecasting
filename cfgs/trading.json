@@ -17,8 +17,8 @@
     "forecasts":
     {
         "FFNN": "data/datasets/trading/point_output.csv",
-        "LSTM": "",
-        "FGNN": "",
-        "ENCTRANS": ""
+        "LSTM": "data/datasets/trading/point_output_lstm.csv",
+        "FGNN": "data/datasets/trading/point_output_fgnn.csv",
+        "LSTM_ATT_LSTM": "data/datasets/trading/point_output_lstm_atten_lstm.csv"
     }
 }

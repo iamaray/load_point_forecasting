@@ -100,6 +100,7 @@ def main(cfg_path):
         )
     elif job_type == 'single_model':
         raise NotImplementedError()
+    
     else:
 
         """

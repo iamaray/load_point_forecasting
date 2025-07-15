@@ -51,7 +51,7 @@ def compute_metrics(strategy_outcomes: List[dict]):
 
         dd = drawdown(pnl)
         data['drawdown'] = dd
-        data['mdd'] = np.min(dd)
+        data['mdd'] = np.min(dd[1:]) / 100 
 
         data['profit_factor'] = profit_factor(pnl)
         data['sharpe'] = sharpe_ratio(mu_pnl, sig_pnl)
@@ -83,25 +83,26 @@ def plot_cumulative_pnl(strategy_outcomes: List[dict], out_filename: str = "cumu
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, out_filename)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig, ax = plt.subplots(1, 1, figsize=(16, 6))
 
     for data in strategy_outcomes:
-        ax1.plot(data['date_idx'], data['cumulative_PnL'],
+        ax.plot(data['date_idx'], data['cumulative_PnL'],
                  label=data.get('name', 'Strategy'))
-    ax1.set_xlabel('Date')
-    ax1.set_ylabel('Cumulative PnL')
-    ax1.set_title('Cumulative PnL Comparison')
-    ax1.legend()
-    ax1.grid(True, alpha=0.3)
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Cumulative PnL')
+    ax.set_title('Cumulative PnL Comparison')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
 
-    for data in strategy_outcomes:
-        ax2.plot(data['date_idx'], data['drawdown'],
-                 label=data.get('name', 'Strategy'))
-    ax2.set_xlabel('Date')
-    ax2.set_ylabel('Drawdown')
-    ax2.set_title('Drawdown Comparison')
-    ax2.legend()
-    ax2.grid(True, alpha=0.3)
+    # for data in strategy_outcomes:
+    #     ax2.plot(data['date_idx'][1:], data['drawdown'][1:],
+    #              label=data.get('name', 'Strategy'))
+    # ax2.set_xlabel('Date')
+    # ax2.set_ylabel('Drawdown')
+    # ax2.set_title('Drawdown Comparison')
+    # ax2.legend()
+    # ax2.grid(True, alpha=0.3)
 
     plt.tight_layout()
     plt.savefig(output_path)
@@ -208,6 +209,42 @@ def profit_factor_barchart(strategy_outcomes: List[dict], out_filename: str = "p
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2., height + 0.02,
                  f'{pf:.2f}', ha='center', va='bottom')
+
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+
+
+def max_drawdown_barchart(strategy_outcomes: List[dict], out_filename: str = "max_drawdown_comparison.png"):
+    output_dir = "results/plots/trading"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, out_filename)
+
+    strategy_names = [
+        data.get('name', f'Strategy_{i}') for i, data in enumerate(strategy_outcomes)]
+    max_drawdowns = [data['mdd'] for data in strategy_outcomes]
+
+    plt.figure(figsize=(10, 6))
+    bars = plt.bar(strategy_names, max_drawdowns, alpha=0.7)
+
+    for bar, mdd in zip(bars, max_drawdowns):
+        if mdd >= -0.05:
+            bar.set_color('green')
+        elif mdd >= -0.15: 
+            bar.set_color('orange')
+        else: 
+            bar.set_color('red')
+
+    plt.xlabel('Strategy')
+    plt.ylabel('Max Drawdown')
+    plt.title('Maximum Drawdown Comparison')
+    plt.xticks(rotation=45, ha='right')
+    plt.grid(True, alpha=0.3, axis='y')
+
+    for bar, mdd in zip(bars, max_drawdowns):
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width()/2., height - 0.01,
+                 f'{mdd:.2%}', ha='center', va='top')
 
     plt.tight_layout()
     plt.savefig(output_path)
