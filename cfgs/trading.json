@@ -1,0 +1,10 @@
+{
+    "job_type": "trading",
+    "forecasts":
+    {
+        "FFNN": "data/datasets/trading/point_output.csv",
+        "LSTM": "",
+        "FGNN": "",
+        "ENCTRANS": ""
+    }
+}
