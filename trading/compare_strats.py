@@ -24,8 +24,8 @@ def sharpe_ratio(mu_pnl: float, sig_pnl: float):
 
 
 def sortino_ratio(pnl: np.array, mu_pnl: float, mar: float = 0.0):
-    bad_dev = np.min(0, pnl - mar)
-    downside_std = np.sqrt(np.mean(bad_dev) ** 2)
+    bad_dev = np.minimum(0, pnl - mar)
+    downside_std = np.sqrt(np.mean(bad_dev ** 2))
     sortino = ((mu_pnl - mar) / downside_std)
 
     return sortino * np.sqrt(24 * 365)
