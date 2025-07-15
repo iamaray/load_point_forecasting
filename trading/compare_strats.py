@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -29,7 +30,7 @@ def sortino_ratio(pnl:np.array, mu_pnl:float, mar:float=0.0):
 def active_info_ratio(pnl1:np.array, pnl2:np.array):
     pass
 
-def compute_metrics(strategy_outcomes:List[dict])->List[dict]:
+def compute_metrics(strategy_outcomes:List[dict]):
     
     for data in strategy_outcomes:
         pnl = data['PnL']
@@ -48,6 +49,51 @@ def compute_metrics(strategy_outcomes:List[dict])->List[dict]:
         data['mdd'] = np.min(dd)
         
         data['profit_factor'] = profit_factor(pnl)
-        
         data['sharpe'] = sharpe_ratio(mu_pnl, sig_pnl)
         data['sortino'] = sortino_ratio(pnl, mu_pnl)
+
+def plot_hourly_pnl(strategy_outcomes:List[dict]):
+    output_dir = "results/plots/trading"
+    os.makedirs(output_dir, exist_ok=True)
+    for data in strategy_outcomes:
+        name = data.get('name', 'Strategy')
+        date_idx = data['date_idx']
+        pnl = data['PnL']
+        plt.figure(figsize=(12, 6))
+        plt.plot(date_idx, pnl, label=f"{name} Hourly PnL")
+        plt.xlabel('Date')
+        plt.ylabel('PnL')
+        plt.title(f'Hourly PnL for {name}')
+        plt.legend()
+        plt.tight_layout()
+        out_filename = f"{name}_hourly_pnl.png".replace(" ", "_")
+        output_path = os.path.join(output_dir, out_filename)
+        plt.savefig(output_path)
+        plt.close()
+
+def plot_cumulative_pnl(strategy_outcomes:List[dict], out_filename:str="cumulative_pnl_comparison.png"):
+    output_dir = "results/plots/trading"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, out_filename)
+
+    plt.figure(figsize=(12, 6))
+    for data in strategy_outcomes:
+        plt.plot(data['date_idx'], data['cumulative_PnL'], label=data.get('name', 'Strategy'))
+    plt.xlabel('Date')
+    plt.ylabel('Cumulative PnL')
+    plt.title('Cumulative PnL Comparison')
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(output_path)
+    plt.close()
+    
+
+def sharpe_barchart(strategy_outcomes:List[dict], out_filename:str="cumulative_pnl_comparison.png"):
+    pass
+
+def sortino_barchart(strategy_outcomes:List[dict], out_filename:str="cumulative_pnl_comparison.png"):
+    pass
+
+def profit_factor_barchart(strategy_outcomes:List[dict], out_filename:str="cumulative_pnl_comparison.png"):
+    pass
+

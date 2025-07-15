@@ -1,5 +1,19 @@
 {
     "job_type": "trading",
+    "params":
+    {
+        "test_start": "2023-08-20 00:00:00",
+        "test_end": "2025-01-07 23:00:00",
+        "trade_start_hr": 9,
+        "trade_end_hr": 17,
+        "init_budget": 1e6,
+        "hourly_volume":1000,
+        "actual_dart_col_name":"ACTUAL",
+        "forecast_dart_col_name":"PREDICTED",
+        "date_col_name":"DATE",
+        "tol":1e-2
+    },
+
     "forecasts":
     {
         "FFNN": "data/datasets/trading/point_output.csv",
