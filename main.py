@@ -21,7 +21,6 @@ from lstm_atten_lstm.trainer import LSTMAttenLSTMTrainer
 from encoder_transformer.model import EncoderTransformer, EncoderTransformer_prep_cfg
 from encoder_transformer.trainer import EncoderTransformerTrainer, EncoderTransformerDiffusionTrainer
 
-from dataclasses import dataclass
 from processing.transforms import StandardScaleNorm, MinMaxNorm, TransformSequence
 
 from pretraining.diffusion import ForwardProcess, DiffusionLoader
