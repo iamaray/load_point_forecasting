@@ -1,0 +1,19 @@
+{
+  "model_name": "fgnn",
+  "job_type": "grid_search",
+  "data_path": "data/datasets/nyc_data",
+  "lr": 0.001,
+  "epochs": 200,
+  "scheduler": "sinusoidal",
+  "save_name": "fgnn_spain",
+  "param_grid": {
+    "embed_size": [32, 64, 128],
+    "hidden_size": [128],
+    "hidden_size_factor": [1],
+    "sparsity_threshold": [0.01, 0.05],
+    "number_frequency": [1, 2],
+    "init_scale": [0.005, 0.02],
+    "embedding_dim": [8, 16],
+    "num_layers": [3, 5]
+  }
+}
