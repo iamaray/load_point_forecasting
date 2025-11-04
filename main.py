@@ -51,7 +51,7 @@ trainers = {
 # }
 
 
-def main(cfg_path):
+def main(cfg_path, target_col=0):
     try:
         with open(cfg_path, 'r') as f:
             config = json.load(f)
@@ -96,7 +96,8 @@ def main(cfg_path):
             trainer_class=trainer_class,
             train_norm=transform,
             scheduler_type=config['scheduler'],
-            save_name=config['save_name']
+            save_name=config['save_name'],
+            target_col=target_col
         )
     elif job_type == 'single_model':
         raise NotImplementedError()
@@ -124,18 +125,22 @@ def main(cfg_path):
         diffus_trainer = EncoderTransformerDiffusionTrainer(
             model=model, forward_process=forward_proc)
 
-        diffus_trainer.pre_train(config['pre_epochs'], diffusion_loader=diffus_loader)
-        
+        diffus_trainer.pre_train(
+            config['pre_epochs'], diffusion_loader=diffus_loader)
+
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        
-        diffus_trainer.train(config['epochs'], diffusion_loader=diffus_loader, val_loader=val_loader)
+
+        diffus_trainer.train(
+            config['epochs'], diffusion_loader=diffus_loader, val_loader=val_loader)
         diffus_trainer.test(test_loader=test_loader, train_norm=transform)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Run model training or grid search based on configuration file')
     parser.add_argument('--config', type=str, required=True,
                         help='Path to the configuration JSON file')
+    parser.add_argument('--target_col', type=int, required=False, default=0)
     args = parser.parse_args()
-    main(cfg_path=args.config)
+    main(cfg_path=args.config, target_col=args.target_col)

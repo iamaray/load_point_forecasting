@@ -46,7 +46,8 @@ def grid_search(
         trainer_class: ModelTrainer,
         train_norm: DataTransform,
         scheduler_type: str = "sinusoidal",
-        save_name: str = 'ffnn'):
+        save_name: str = 'ffnn',
+        target_col: int = 0):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -84,7 +85,6 @@ def grid_search(
     for i, params in enumerate(param_combs):
         logger.info(f"Combination {i+1}/{len(param_combs)}: {params}")
 
-        # Initialize model with device
         model = model_class(**params, device=device)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -102,7 +102,8 @@ def grid_search(
             optimizer=optimizer,
             lr=lr,
             scheduler=scheduler,
-            device=device
+            device=device,
+            target_col=target_col
         )
 
         history = trainer.train(epochs=epochs, train_loader=train_loader,
