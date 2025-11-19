@@ -102,8 +102,7 @@ def grid_search(
             optimizer=optimizer,
             lr=lr,
             scheduler=scheduler,
-            device=device,
-            target_col=target_col
+            device=device
         )
 
         history = trainer.train(epochs=epochs, train_loader=train_loader,
